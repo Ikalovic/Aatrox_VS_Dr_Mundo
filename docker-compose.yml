@@ -1,0 +1,9 @@
+services:
+  game:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      FLAG: "${FLAG:-flag{development_only}}"
+      RACE_WINDOW_MS: "75"
+      DATABASE: /tmp/aatrox-game.db
