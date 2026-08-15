@@ -29,6 +29,10 @@ def enter_node(node_id):
         linked=c.execute('SELECT 1 FROM map_edges WHERE run_id=? AND from_node_id=? AND to_node_id=?',(rid,current,node_id)).fetchone()
         if not linked: return jsonify(ok=False,error='node_locked'),409
         c.execute("UPDATE map_nodes SET state='left' WHERE id=?",(current,)); c.execute("UPDATE map_nodes SET state='current' WHERE id=?",(node_id,)); c.execute('UPDATE run_map_state SET current_node_id=? WHERE run_id=?',(node_id,rid))
+        kind=c.execute('SELECT node_type FROM map_nodes WHERE id=?',(node_id,)).fetchone()['node_type']
+        stage={'normal':'minion','elite':'monster','hero':'hero','shop':'shop','campfire':'campfire','boss':'boss','event':'event'}.get(kind,'event')
+        hp=ENEMIES[stage][1] if stage in ENEMIES else 0
+        c.execute('UPDATE runs SET stage=?, enemy_hp=? WHERE id=?',(stage,hp,rid))
     return jsonify(ok=True,map=map_snapshot(current_app,rid))
 @bp.post("/api/boss/start")
 def boss_start():
