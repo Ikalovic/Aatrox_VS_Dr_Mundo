@@ -29,12 +29,10 @@ def create_app(test_config=None):
         return jsonify(ok=False, error="not_found", message="资源不存在"), 404
 
     from .routes.game import bp as game_bp
-    from .routes.augments import bp as augment_bp
     from .routes.rewards import bp as reward_bp
     from .routes.shop import bp as shop_bp
     from .routes.campfires import bp as campfire_bp
     app.register_blueprint(game_bp)
-    app.register_blueprint(augment_bp)
     app.register_blueprint(reward_bp)
     app.register_blueprint(shop_bp)
     app.register_blueprint(campfire_bp)
