@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS map_nodes (id TEXT PRIMARY KEY, run_id TEXT, floor IN
 CREATE TABLE IF NOT EXISTS map_edges (run_id TEXT, from_node_id TEXT, to_node_id TEXT);
 CREATE TABLE IF NOT EXISTS run_map_state (run_id TEXT PRIMARY KEY, current_node_id TEXT, status TEXT DEFAULT 'active');
 CREATE TABLE IF NOT EXISTS campfire_offers (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, node_id TEXT, offer_json TEXT, chosen INTEGER DEFAULT 0, refreshed_count INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS node_events (run_id TEXT NOT NULL, node_id TEXT NOT NULL, event_key TEXT NOT NULL, offer_json TEXT NOT NULL, chosen_key TEXT, PRIMARY KEY (run_id,node_id));
 '''
 
 def connect(app=None):
