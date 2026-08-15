@@ -16,7 +16,7 @@ def test_w_debuffs_one_enemy_attack():
 def test_game_route_uses_w_as_a_combat_action(client):
     client.post('/api/runs')
     graph = client.get('/api/map').get_json()['map']
-    first = next(edge['to_node_id'] for edge in graph['edges'] if edge['from_node_id'] == 'n1_0')
+    first = next(edge['to_node_id'] for edge in graph['edges'] if edge['from_node_id'] == graph['current_node_id'])
     assert client.post(f'/api/map/enter/{first}').status_code == 200
     response = client.post('/api/game/action', json={'action': 'w'})
     assert response.status_code == 200
