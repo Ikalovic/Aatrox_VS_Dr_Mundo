@@ -51,3 +51,17 @@ def test_meditation_reroll_costs_token_and_replaces_candidates(client, app):
 def test_global_augment_endpoints_are_not_hex_source(client):
     client.post('/api/runs')
     assert client.get('/api/augments/search').status_code == 404
+
+
+def test_closed_campfire_allows_the_run_to_continue(client, app):
+    from app.db import connect
+
+    run = client.post('/api/runs').get_json()['run']
+    node = make_campfire_current(app, run['id'])
+    assert client.post(f'/api/campfires/{node}/rest').status_code == 200
+    with connect(app) as c:
+        next_node = c.execute(
+            'SELECT to_node_id FROM map_edges WHERE run_id=? AND from_node_id=? LIMIT 1',
+            (run['id'], node),
+        ).fetchone()['to_node_id']
+    assert client.post(f'/api/map/enter/{next_node}').status_code == 200

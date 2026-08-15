@@ -8,7 +8,7 @@ def create_run(app, seed=None):
     from .game.mapgen import generate_map
     nodes,edges=generate_map(seed)
     with connect(app) as c:
-        c.execute("INSERT INTO runs(id,stage,gold,enemy_hp,seed) VALUES (?,?,?,?,?)", (run_id,"minion",0,ENEMIES["minion"][1],seed))
+        c.execute("INSERT INTO runs(id,stage,gold,enemy_hp,seed) VALUES (?,?,?,?,?)", (run_id,"event",0,0,seed))
         c.executemany("INSERT INTO map_nodes(id,run_id,floor,node_type,state) VALUES (?,?,?,?,?)",[(n['id'],run_id,n['floor'],n['node_type'],'current' if n['floor']==1 else 'locked') for n in nodes])
         c.executemany("INSERT INTO map_edges(run_id,from_node_id,to_node_id) VALUES (?,?,?)",[(run_id,a,b) for a,b in edges])
         c.execute("INSERT INTO run_map_state(run_id,current_node_id) VALUES (?,?)",(run_id,'n1_0'))
