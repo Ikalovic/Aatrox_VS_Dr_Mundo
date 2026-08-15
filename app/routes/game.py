@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app, jsonify, request, session
 from ..content import ENEMIES
-from ..models import create_run,get_run,save_run,stats,has_contract
+from ..models import create_run,get_run,save_run,stats,has_contract,map_snapshot
 from ..game.combat import armor_damage,q_raw,advance_q,boss_q3_damage
 bp = Blueprint("game", __name__)
 
@@ -15,6 +15,21 @@ def start():
 @bp.get("/api/state")
 def state():
     rid=session.get("run_id"); return (jsonify(ok=True,**snapshot(rid)) if rid else (jsonify(ok=False,error="run_not_found"),404))
+@bp.get('/api/map')
+def game_map():
+    rid=session.get('run_id')
+    return (jsonify(ok=True,map=map_snapshot(current_app,rid)) if rid else (jsonify(ok=False,error='run_not_found'),404))
+@bp.post('/api/map/enter/<node_id>')
+def enter_node(node_id):
+    rid=session.get('run_id'); run=get_run(current_app,rid) if rid else None
+    if not run or run.get('status')=='failed': return jsonify(ok=False,error='run_failed'),409
+    from ..db import connect
+    with connect() as c:
+        current=c.execute('SELECT current_node_id FROM run_map_state WHERE run_id=?',(rid,)).fetchone()['current_node_id']
+        linked=c.execute('SELECT 1 FROM map_edges WHERE run_id=? AND from_node_id=? AND to_node_id=?',(rid,current,node_id)).fetchone()
+        if not linked: return jsonify(ok=False,error='node_locked'),409
+        c.execute("UPDATE map_nodes SET state='left' WHERE id=?",(current,)); c.execute("UPDATE map_nodes SET state='current' WHERE id=?",(node_id,)); c.execute('UPDATE run_map_state SET current_node_id=? WHERE run_id=?',(node_id,rid))
+    return jsonify(ok=True,map=map_snapshot(current_app,rid))
 @bp.post("/api/boss/start")
 def boss_start():
     rid=session.get("run_id"); run=get_run(current_app,rid) if rid else None

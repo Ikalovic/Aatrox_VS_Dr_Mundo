@@ -1,11 +1,17 @@
-import uuid
+import uuid, random
 from .db import connect
 from .content import ENEMIES, ITEMS
 
-def create_run(app):
+def create_run(app, seed=None):
     run_id = str(uuid.uuid4())
+    seed = seed if seed is not None else random.randrange(2**31)
+    from .game.mapgen import generate_map
+    nodes,edges=generate_map(seed)
     with connect(app) as c:
-        c.execute("INSERT INTO runs(id,stage,gold,enemy_hp) VALUES (?,?,?,?)", (run_id,"minion",0,ENEMIES["minion"][1]))
+        c.execute("INSERT INTO runs(id,stage,gold,enemy_hp,seed) VALUES (?,?,?,?,?)", (run_id,"minion",0,ENEMIES["minion"][1],seed))
+        c.executemany("INSERT INTO map_nodes(id,run_id,floor,node_type,state) VALUES (?,?,?,?,?)",[(n['id'],run_id,n['floor'],n['node_type'],'current' if n['floor']==1 else 'locked') for n in nodes])
+        c.executemany("INSERT INTO map_edges(run_id,from_node_id,to_node_id) VALUES (?,?,?)",[(run_id,a,b) for a,b in edges])
+        c.execute("INSERT INTO run_map_state(run_id,current_node_id) VALUES (?,?)",(run_id,'n1_0'))
     return run_id
 
 def get_run(app, run_id):
@@ -40,3 +46,9 @@ def stats(app, run_id):
 
 def has_contract(app, run_id):
     with connect(app) as c: return bool(c.execute("SELECT 1 FROM run_augments WHERE run_id=? AND augment_id='darkin-contract'",(run_id,)).fetchone())
+
+def map_snapshot(app, run_id):
+    with connect(app) as c:
+        nodes=[dict(r) for r in c.execute("SELECT id,floor,node_type,state FROM map_nodes WHERE run_id=? ORDER BY floor,id",(run_id,))]
+        edges=[dict(r) for r in c.execute("SELECT from_node_id,to_node_id FROM map_edges WHERE run_id=?",(run_id,))]
+    return {'nodes':nodes,'edges':edges,'required_route':['hero','shop','campfire','boss']}
