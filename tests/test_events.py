@@ -25,6 +25,18 @@ def test_current_event_returns_persisted_offer(client, app):
     assert first['event_key'] in {'loot', 'altar', 'relic'}
 
 
+def test_entering_event_node_keeps_it_active_for_choice(client, app):
+    from app.db import connect
+
+    run = client.post('/api/runs').get_json()['run']
+    graph = client.get('/api/map').get_json()['map']
+    node = next(edge['to_node_id'] for edge in graph['edges'] if edge['from_node_id'] == graph['current_node_id'])
+    with connect(app) as c:
+        c.execute("UPDATE map_nodes SET node_type='event' WHERE id=?", (node,))
+    client.post(f'/api/map/enter/{node}')
+    assert client.get(f'/api/events/{node}').status_code == 200
+
+
 def test_event_choice_closes_node_and_cannot_repeat(client, app):
     node = make_event_current(client, app)
     offer = client.get(f'/api/events/{node}').get_json()['offer']

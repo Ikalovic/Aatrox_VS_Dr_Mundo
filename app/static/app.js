@@ -1,4 +1,4 @@
-const gameState = {run: null, stats: null, map: null, logs: [], campfireOffer: null, anvilOffer: null};
+const gameState = {run: null, stats: null, map: null, logs: [], campfireOffer: null, anvilOffer: null, randomEvent: null, randomEventNode: null, randomEventResult: null, eventLoading: false};
 const el = (selector) => document.querySelector(selector);
 const NODE_LABELS = {start: '起点', normal: '小兵', elite: '精英', hero: '英雄', shop: '商店', campfire: '篝火', event: '事件', boss: '蒙多'};
 const ENEMY_VIEW = {minion: ['小兵', 250], monster: ['野怪', 800], hero: ['敌方英雄', 1800], boss: ['蒙多', 32000]};
@@ -34,6 +34,7 @@ function renderApp() {
   if (!gameState.run) return;
   if (['minion', 'monster', 'hero', 'boss'].includes(gameState.run.stage)) return renderBattleScene();
   const currentNode = gameState.map && gameState.map.nodes.find((node) => node.id === gameState.map.current_node_id);
+  if (currentNode && currentNode.node_type === 'event' && (currentNode.state === 'current' || gameState.randomEventResult)) return renderRandomEvent();
   if (gameState.run.stage === 'campfire' && currentNode && currentNode.state === 'closed') return renderMapScene();
   if (['shop', 'campfire'].includes(gameState.run.stage)) return renderEventScene();
   renderMapScene();
@@ -84,4 +85,22 @@ function renderCampfireEvent() {
 async function campfireAction(suffix, body = {}) { const node = gameState.map.current_node_id; const data = await api(`/api/campfires/${node}${suffix}`, body); if (data.ok && data.offer) gameState.campfireOffer = data.offer; if (data.ok && suffix.includes('choose')) gameState.campfireOffer = null; await refreshMap(); renderApp(); }
 async function campfireSearch(query) { const node = gameState.map.current_node_id; const data = await api(`/api/campfires/${node}/meditate/search?q=${encodeURIComponent(query)}`); if (data.ok) { gameState.campfireOffer = data.results; renderCampfireEvent(); } }
 function renderEventScene() { showScene('event'); if (gameState.run.stage === 'shop') renderShopEvent(); else renderCampfireEvent(); }
+async function loadRandomEvent() {
+  if (gameState.eventLoading || !gameState.map) return;
+  gameState.eventLoading = true;
+  const node = gameState.map.current_node_id;
+  const response = await fetch(`/api/events/${node}`); const data = await response.json();
+  gameState.eventLoading = false;
+  if (data.ok) { gameState.randomEvent = data.offer; gameState.randomEventNode = node; renderRandomEvent(); }
+  else { addLog(`事件加载失败：${data.error || '未知原因'}`); renderMapScene(); }
+}
+function renderRandomEvent() {
+  showScene('event');
+  const node = gameState.map.current_node_id;
+  if (gameState.randomEventResult) { el('#scene-event').innerHTML = `<section class="event-panel event-result"><p class="eyebrow">事件结算</p><h1>${escapeHtml(gameState.randomEventResult)}</h1><button id="continue-route" class="primary-action">继续路线</button></section>`; el('#continue-route').onclick = () => { gameState.randomEventResult = null; gameState.randomEvent = null; renderMapScene(); }; return; }
+  if (!gameState.randomEvent || gameState.randomEventNode !== node) { el('#scene-event').innerHTML = '<section class="event-panel"><p>事件正在展开……</p></section>'; loadRandomEvent(); return; }
+  const offer = gameState.randomEvent; const risk = offer.event_key === 'altar';
+  el('#scene-event').innerHTML = `<section class="event-panel"><p class="eyebrow">随机事件</p><h1>${escapeHtml(offer.title)}</h1><p>${risk ? '力量总是伴随着代价。' : '你发现了一份可以带走的收获。'}</p><div class="choice-grid">${offer.choices.map((choice) => `<button class="choice-card ${risk ? 'risk' : 'reward'}" data-event-choice="${choice.key}"><div class="portrait-placeholder">事件插画待补充</div><h2>${escapeHtml(choice.text)}</h2><p>选择后不可撤销</p></button>`).join('')}</div></section>`;
+  document.querySelectorAll('[data-event-choice]').forEach((button) => { button.onclick = async () => { const data = await api(`/api/events/${node}/choose`, {choice_key: button.dataset.eventChoice}); if (!data.ok) return; gameState.randomEventResult = data.result; addLog(data.result); await refreshMap(); renderApp(); }; });
+}
 el('#start').onclick = async () => { const data = await api('/api/runs', {}); if (data.ok) { addLog('远征开始。'); await refreshMap(); renderApp(); } };

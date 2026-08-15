@@ -37,7 +37,7 @@ def enter_node(node_id):
         stage={'normal':'minion','elite':'monster','hero':'hero','shop':'shop','campfire':'campfire','boss':'boss','event':'event'}.get(kind,'event')
         hp=ENEMIES[stage][1] if stage in ENEMIES else 0
         c.execute('UPDATE runs SET stage=?, enemy_hp=? WHERE id=?',(stage,hp,rid))
-        if kind in {'shop', 'event'}:
+        if kind == 'shop':
             c.execute("UPDATE map_nodes SET state='cleared' WHERE id=?", (node_id,))
     return jsonify(ok=True, **snapshot(rid), map=map_snapshot(current_app,rid))
 @bp.post("/api/game/action")
