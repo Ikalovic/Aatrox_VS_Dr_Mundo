@@ -39,7 +39,7 @@ def enter_node(node_id):
         c.execute('UPDATE runs SET stage=?, enemy_hp=? WHERE id=?',(stage,hp,rid))
         if kind in {'shop', 'event'}:
             c.execute("UPDATE map_nodes SET state='cleared' WHERE id=?", (node_id,))
-    return jsonify(ok=True,map=map_snapshot(current_app,rid))
+    return jsonify(ok=True, **snapshot(rid), map=map_snapshot(current_app,rid))
 @bp.post("/api/game/action")
 def action():
     rid=session.get("run_id"); run=get_run(current_app,rid) if rid else None; act=(request.get_json(silent=True) or {}).get("action")
