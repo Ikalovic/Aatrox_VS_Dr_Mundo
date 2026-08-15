@@ -65,3 +65,16 @@ def test_closed_campfire_allows_the_run_to_continue(client, app):
             (run['id'], node),
         ).fetchone()['to_node_id']
     assert client.post(f'/api/map/enter/{next_node}').status_code == 200
+
+
+def test_choosing_meditation_closes_campfire(client, app):
+    from app.db import connect
+
+    run = client.post('/api/runs').get_json()['run']
+    node = make_campfire_current(app, run['id'])
+    offer = client.post(f'/api/campfires/{node}/meditate').get_json()['offer']
+    assert client.post(
+        f'/api/campfires/{node}/meditate/choose', json={'augment_id': offer[0]['id']}
+    ).status_code == 200
+    with connect(app) as c:
+        assert c.execute('SELECT state FROM map_nodes WHERE id=?', (node,)).fetchone()['state'] == 'closed'

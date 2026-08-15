@@ -1,1 +1,37 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aatrox VS Dr. Mundo</title><link rel="stylesheet" href="/static/style.css"></head><body><main id="game"><h1>Aatrox VS Dr. Mundo</h1><p>海克斯大乱斗 · CTF</p><button id="start">开始一局</button><section id="state">尚未开始</section><section><h2>战斗</h2><button data-action="attack">普攻</button><button data-action="q">Q</button><button data-action="e">E</button><button data-action="r">R</button><button id="boss">挑战蒙多</button></section><section><h2>海克斯检索</h2><input id="query" placeholder="输入海克斯名称"><button id="search">搜索</button><pre id="results"></pre></section><section><h2>商店</h2><button id="claim">领取英雄奖励</button><button id="anvil">购买属性锻造器（750）</button><input id="batch" value='["heartsteel","heartsteel","heartsteel","heartsteel","bloodmail","bloodmail","bloodmail","bloodmail"]'><button id="buy">批量购买</button></section><pre id="log"></pre></main><script src="/static/app.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Aatrox VS Dr. Mundo</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main id="game">
+    <h1>Aatrox VS Dr. Mundo</h1>
+    <p>海克斯大乱斗 · CTF 肉鸽</p>
+    <button id="start">开始一局</button>
+    <section id="state">尚未开始</section>
+    <section><h2>路线地图</h2><div id="map">开始一局后显示 12 层路线</div></section>
+    <section><h2>回合战斗</h2>
+      <button data-action="q">Q · 暗裔利刃（90%）</button>
+      <button data-action="w">W · 恶火束链（70%）</button>
+      <button data-action="e">E · 暗影冲决</button>
+      <button data-action="r">R · 大灭</button>
+    </section>
+    <section id="campfire"><h2>篝火</h2>
+      <button id="rest">休息（回满血）</button><button id="meditate">冥想（三选一）</button>
+      <button id="reroll">刷新候选（消耗刷新券）</button>
+      <input id="query" placeholder="冥想中可检索海克斯"><button id="search">搜索</button>
+      <div id="offers"></div>
+    </section>
+    <section><h2>商店</h2>
+      <button id="claim">领取英雄奖励</button><button id="anvil">购买属性锻造器（750）</button>
+      <input id="batch" value='["heartsteel","heartsteel","heartsteel","heartsteel","bloodmail","bloodmail","bloodmail","bloodmail"]'>
+      <button id="buy">批量购买</button>
+    </section>
+    <pre id="log"></pre>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

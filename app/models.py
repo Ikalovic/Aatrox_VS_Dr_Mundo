@@ -51,4 +51,5 @@ def map_snapshot(app, run_id):
     with connect(app) as c:
         nodes=[dict(r) for r in c.execute("SELECT id,floor,node_type,state FROM map_nodes WHERE run_id=? ORDER BY floor,id",(run_id,))]
         edges=[dict(r) for r in c.execute("SELECT from_node_id,to_node_id FROM map_edges WHERE run_id=?",(run_id,))]
-    return {'nodes':nodes,'edges':edges,'required_route':['hero','shop','campfire','boss']}
+        current=c.execute("SELECT current_node_id FROM run_map_state WHERE run_id=?",(run_id,)).fetchone()
+    return {'nodes':nodes,'edges':edges,'current_node_id':current['current_node_id'] if current else None,'required_route':['hero','shop','campfire','boss']}
