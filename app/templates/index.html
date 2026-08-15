@@ -3,35 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Aatrox VS Dr. Mundo</title>
+  <title>暗裔远征：剑魔 VS 蒙多</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <main id="game">
-    <h1>Aatrox VS Dr. Mundo</h1>
-    <p>海克斯大乱斗 · CTF 肉鸽</p>
-    <button id="start">开始一局</button>
-    <section id="state">尚未开始</section>
-    <section><h2>路线地图</h2><div id="map">开始一局后显示 12 层路线</div></section>
-    <section><h2>回合战斗</h2>
-      <button data-action="q">Q · 暗裔利刃（90%）</button>
-      <button data-action="w">W · 恶火束链（70%）</button>
-      <button data-action="e">E · 暗影冲决</button>
-      <button data-action="r">R · 大灭</button>
+  <header id="topbar" class="topbar">
+    <div class="brand"><span>暗裔远征</span><small>海克斯大乱斗</small></div>
+    <div id="run-stats" aria-live="polite"></div>
+  </header>
+  <main id="game-shell">
+    <section id="scene-map" class="scene" aria-live="polite">
+      <div class="landing"><p class="eyebrow">AATROX VS DR. MUNDO</p><h1>踏上暗裔远征</h1><p>选择路线、锻造装备、寻找足以斩杀蒙多的力量。</p><button id="start" class="primary-action">开始远征</button></div>
     </section>
-    <section id="campfire"><h2>篝火</h2>
-      <button id="rest">休息（回满血）</button><button id="meditate">冥想（三选一）</button>
-      <button id="reroll">刷新候选（消耗刷新券）</button>
-      <input id="query" placeholder="冥想中可检索海克斯"><button id="search">搜索</button>
-      <div id="offers"></div>
-    </section>
-    <section><h2>商店</h2>
-      <button id="claim">领取英雄奖励</button><button id="anvil">购买属性锻造器（750）</button>
-      <input id="batch" value='["heartsteel","heartsteel","heartsteel","heartsteel","bloodmail","bloodmail","bloodmail","bloodmail"]'>
-      <button id="buy">批量购买</button>
-    </section>
-    <pre id="log"></pre>
+    <section id="scene-battle" class="scene" aria-live="polite" hidden></section>
+    <section id="scene-event" class="scene" aria-live="polite" hidden></section>
   </main>
+  <aside id="activity-log" aria-label="冒险记录"><h2>战斗记录</h2><ol id="log-lines"><li>远征尚未开始。</li></ol></aside>
+  <div id="modal-root"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>
