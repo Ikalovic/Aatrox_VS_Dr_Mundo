@@ -30,6 +30,14 @@ def resolve_current():
         current = graph()['current_node_id']
         response = session.post(f'{base}/api/campfires/{current}/rest').json()
         if not response.get('ok'): raise SystemExit(response)
+    if state()['stage'] == 'event':
+        current = graph()['current_node_id']
+        node = next(item for item in graph()['nodes'] if item['id'] == current)
+        if node['node_type'] == 'event' and node['state'] == 'current':
+            offer = session.get(f'{base}/api/events/{current}').json()
+            if not offer.get('ok'): raise SystemExit(offer)
+            result = session.post(f'{base}/api/events/{current}/choose', json={'choice_key': offer['offer']['choices'][0]['key']}).json()
+            if not result.get('ok'): raise SystemExit(result)
     clear_battle()
 
 # Floor 2 is a forced hero node. Win it, then race its post-battle reward.
