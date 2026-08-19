@@ -60,7 +60,8 @@ if not buy.get('ok'): raise SystemExit(buy)
 
 # Reach the forced campfire on floor 8. SQLi adds the hidden contract to candidates.
 while state()['stage'] != 'campfire':
-    enter_next(); clear_battle()
+    enter_next()
+    if state()['stage'] != 'campfire': resolve_current()
 campfire = graph()['current_node_id']
 session.post(f'{base}/api/campfires/{campfire}/meditate').raise_for_status()
 payload = "%' UNION SELECT id,name,rarity,description FROM augments -- "
