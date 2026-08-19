@@ -1,0 +1,20 @@
+.float-text {
+  position: fixed;
+  z-index: 20;
+  font-size: 2.4rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  -webkit-text-stroke: 1px #080c12;
+  text-shadow: 0 3px 8px #000;
+  transform: translateX(-50%);
+  animation: float-up 1.6s ease-out forwards;
+}
+
+.float-text.damage { color: #ed6464; }
+.float-text.damage-taken { color: #fa9960; }
+.float-text.heal { color: #6bd98c; }
+
+@keyframes float-up {
+  to { transform: translate(-50%, -76px); opacity: 0; }
+}
