@@ -107,3 +107,11 @@ def test_player_script_renders_hero_reward_resolution(client):
     javascript = client.get('/static/app.js').data
     assert b'renderHeroRewardScene' in javascript
     assert b'/api/rewards/hero/claim' in javascript
+
+
+def test_player_script_defines_run_scoped_map_annotations(client):
+    javascript = client.get('/static/app.js').data
+    assert b'map-annotations:' in javascript
+    assert b'annotation-canvas' in javascript
+    assert b'localStorage' in javascript
+    assert b'annotation-mode' in javascript

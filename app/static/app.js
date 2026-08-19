@@ -31,6 +31,24 @@ function renderTopbar() {
   if (!run || !stats) { el('#run-stats').innerHTML = '<span class="stat-pill">尚未出征</span>'; return; }
   el('#run-stats').innerHTML = `<span class="stat-pill gold">金币 ${run.gold}</span><span class="stat-pill hp">HP ${run.hp}/${stats.max_hp}</span><span class="stat-pill">攻击 ${stats.attack}</span><span class="stat-pill">护甲 ${stats.armor}</span><span class="stat-pill">吸血 ${stats.lifesteal}%</span><span class="stat-pill">刷新券 ${run.reroll_tokens}</span>`;
 }
+function annotationStorageKey() { return `map-annotations:${gameState.run.id}`; }
+function setupMapAnnotations(width, height) {
+  const mapCanvas = el('.map-canvas'); if (!mapCanvas) return;
+  const canvas = document.createElement('canvas'); canvas.id = 'annotation-canvas'; canvas.width = width; canvas.height = height; mapCanvas.append(canvas);
+  const toolbar = document.createElement('div'); toolbar.className = 'annotation-toolbar'; toolbar.innerHTML = '<span>路线标记</span><button data-annotation-mode="draw">绘制</button><button data-annotation-mode="erase">擦除</button><button data-annotation-mode="clear">清空标记</button>';
+  el('.map-viewport').before(toolbar);
+  const ctx = canvas.getContext('2d'); let mode = 'none'; let drawing = null;
+  let strokes = JSON.parse(localStorage.getItem(annotationStorageKey()) || '[]');
+  const save = () => localStorage.setItem(annotationStorageKey(), JSON.stringify(strokes));
+  const redraw = () => { ctx.clearRect(0, 0, width, height); strokes.forEach((stroke) => { if (stroke.points.length < 2) return; ctx.save(); ctx.globalCompositeOperation = stroke.mode === 'erase' ? 'destination-out' : 'source-over'; ctx.strokeStyle = '#e6bd62'; ctx.lineWidth = stroke.mode === 'erase' ? 22 : 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); stroke.points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y)); ctx.stroke(); ctx.restore(); }); };
+  const point = (event) => { const rect = canvas.getBoundingClientRect(); return {x: (event.clientX - rect.left) * width / rect.width, y: (event.clientY - rect.top) * height / rect.height}; };
+  const setMode = (next) => { mode = next; canvas.className = `annotation-mode ${mode}`; toolbar.querySelectorAll('[data-annotation-mode]').forEach((button) => button.classList.toggle('active', button.dataset.annotationMode === mode)); };
+  toolbar.querySelectorAll('[data-annotation-mode]').forEach((button) => { button.onclick = () => { if (button.dataset.annotationMode === 'clear') { strokes = []; save(); redraw(); setMode('none'); } else setMode(button.dataset.annotationMode); }; });
+  canvas.addEventListener('pointerdown', (event) => { if (mode === 'none') return; drawing = {mode, points: [point(event)]}; canvas.setPointerCapture(event.pointerId); });
+  canvas.addEventListener('pointermove', (event) => { if (!drawing) return; drawing.points.push(point(event)); strokes.push(drawing); redraw(); strokes.pop(); });
+  canvas.addEventListener('pointerup', () => { if (!drawing) return; if (drawing.points.length > 1) { strokes.push(drawing); save(); } drawing = null; });
+  redraw(); setMode('none');
+}
 function renderMapScene() {
   const map = gameState.map;
   if (!map) return;
@@ -43,6 +61,7 @@ function renderMapScene() {
   const buttons = map.nodes.map((node) => { const [title, risk, reward] = NODE_INFO[node.node_type]; const point = positions[node.id]; return `<button class="map-node-dot ${node.node_type} ${node.state} ${reachable.has(node.id) ? 'reachable' : ''}" data-node="${node.id}" style="left:${point.x}px;top:${point.y}px" ${reachable.has(node.id) ? '' : 'disabled'} aria-label="第 ${node.floor} 层 ${title}，${risk}，${reward}"><b>${node.floor}</b><span>${title}</span><i class="node-tooltip">第 ${node.floor} 层 · ${title}<br>${risk} · ${reward}</i></button>`; }).join('');
   el('#scene-map').innerHTML = `<div class="scene-heading"><p class="eyebrow">远征路线</p><h1>选择下一步</h1><p>发光连线表示当前可走路线；悬停节点可查看风险与收益。</p></div><div class="map-viewport"><div class="map-canvas" style="width:${width}px;height:${height}px"><svg class="map-lines" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${lines}</svg>${buttons}</div></div>`;
   document.querySelectorAll('[data-node]').forEach((button) => { button.onclick = async () => { const data = await api(`/api/map/enter/${button.dataset.node}`, {}); if (data.ok) { addLog(`进入：${NODE_LABELS[(gameState.map.nodes.find((node) => node.id === button.dataset.node) || {}).node_type] || '未知节点'}`); await refreshMap(); renderApp(); } }; });
+  setupMapAnnotations(width, height);
 }
 function renderApp() {
   renderTopbar();
