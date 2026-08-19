@@ -8,9 +8,9 @@ def boss_q3_damage(attack, boss_armor, boss_max_hp, has_contract):
     if has_contract: raw=raw*7.5+boss_max_hp*.35
     return armor_damage(raw,boss_armor)
 
-def giant_slayer_multiplier(enemy_hp, player_max_hp):
-    if player_max_hp <= 0: return 1
-    return 1 + min(.70, .70 * enemy_hp / (player_max_hp * 1.2))
+def dwarf_slayer_multiplier(player_max_hp, enemy_max_hp):
+    if enemy_max_hp <= 0: return 1
+    return 1 + min(.70, max(0, .70 * (player_max_hp / enemy_max_hp - 1) / 2.2))
 
 def resolve_turn(state, action, attack, armor, enemy_attack, enemy_armor, rolls, lifesteal=0, max_hp=None, damage_multiplier=1, dual_wield=False):
     state=dict(state); hit_roll,dodge_roll=rolls; state['enemy_raw_attack']=enemy_attack

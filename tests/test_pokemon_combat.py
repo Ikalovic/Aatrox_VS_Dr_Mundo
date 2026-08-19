@@ -1,4 +1,4 @@
-from app.game.combat import accuracy_hit, giant_slayer_multiplier, resolve_turn
+from app.game.combat import accuracy_hit, dwarf_slayer_multiplier, resolve_turn
 
 
 def test_accuracy_boundaries():
@@ -29,6 +29,6 @@ def test_lifesteal_combines_equipment_and_e_bonus():
     assert state['hp'] == 1000 + state['healing']
 
 
-def test_giant_slayer_scales_to_seventy_percent_at_health_threshold():
-    assert giant_slayer_multiplier(12000, 10000) == 1.70
-    assert giant_slayer_multiplier(6000, 10000) == 1.35
+def test_dwarf_slayer_scales_to_seventy_percent_at_health_threshold():
+    assert dwarf_slayer_multiplier(32000, 10000) == 1.70
+    assert dwarf_slayer_multiplier(10000, 10000) == 1

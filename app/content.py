@@ -8,7 +8,7 @@ AUGMENTS = [
     ("darkin-contract", "暗裔契约", "prismatic", "Q3 获得最大生命伤害与斩杀", 1, 1, "darkin_contract"),
     ("gamba", "掷骰狂人", "prismatic", "刷新券+2，获得3次免费锻造", 0, 120000000, "reroll"),
     ("soul", "灵魂虹吸", "gold", "吸血+25%", 0, 120000000, "lifesteal"),
-    ("giant-slayer", "巨人杀手", "gold", "敌方生命越高，伤害最高+70%", 0, 120000000, "giant_slayer"),
+    ("giant-slayer", "矮人杀手", "gold", "自身最大生命越高，伤害最高+70%", 0, 120000000, "dwarf_slayer"),
     ("steel", "钢化你心", "gold", "最大生命+2200", 0, 120000000, "health"),
     ("dragon", "全能龙魂", "prismatic", "攻击+140", 0, 120000000, "attack"),
     ("goliath", "歌利亚巨人", "prismatic", "最大生命+4000", 0, 120000000, "health"),
@@ -43,4 +43,4 @@ def enemy_for_floor(enemy_key, floor):
         hp_multiplier, attack_multiplier = PRESSURE_MULTIPLIERS[enemy_key]
         hp = int(hp * hp_multiplier); attack = int(attack * attack_multiplier)
     return {"hp": int(hp), "attack": int(attack), "armor": int(armor), "reward": int(reward)}
-ANVIL = {"silver": (80, {"attack": 15, "health": 600, "armor": 10}), "gold": (19, {"attack": 30, "health": 1200, "armor": 20}), "prismatic": (1, {"attack": 60, "health": 2400, "armor": 35})}
+ANVIL = {"silver": (80, {"attack": 8, "health": 300, "armor": 5}), "gold": (19, {"attack": 16, "health": 600, "armor": 10}), "prismatic": (1, {"attack": 32, "health": 1200, "armor": 18})}

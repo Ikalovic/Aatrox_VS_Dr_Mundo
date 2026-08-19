@@ -9,7 +9,7 @@ def create_run(app, seed=None):
     nodes,edges=generate_map(seed)
     node_ids={node['id']: f'{run_id}:{node["id"]}' for node in nodes}
     with connect(app) as c:
-        c.execute("INSERT INTO runs(id,stage,gold,enemy_hp,seed) VALUES (?,?,?,?,?)", (run_id,"event",0,0,seed))
+        c.execute("INSERT INTO runs(id,stage,gold,enemy_hp,boss_hp,seed) VALUES (?,?,?,?,?,?)", (run_id,"event",0,0,48000,seed))
         c.executemany("INSERT INTO map_nodes(id,run_id,floor,node_type,state) VALUES (?,?,?,?,?)",[(node_ids[n['id']],run_id,n['floor'],n['node_type'],'current' if n['floor']==1 else 'locked') for n in nodes])
         c.executemany("INSERT INTO map_edges(run_id,from_node_id,to_node_id) VALUES (?,?,?)",[(run_id,node_ids[a],node_ids[b]) for a,b in edges])
         c.execute("INSERT INTO run_map_state(run_id,current_node_id) VALUES (?,?)",(run_id,node_ids['n1_0']))

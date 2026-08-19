@@ -5,7 +5,7 @@ fxLayer.id = 'combat-fx-layer';
 fxLayer.setAttribute('aria-hidden', 'true');
 document.body.append(fxLayer);
 const NODE_LABELS = {start: '起点', normal: '小兵', elite: '精英', hero: '英雄', shop: '商店', campfire: '篝火', event: '事件', boss: '蒙多'};
-const ENEMY_VIEW = {minion: ['小兵', 250], monster: ['野怪', 800], hero: ['敌方英雄', 1800], boss: ['蒙多', 32000]};
+const ENEMY_VIEW = {minion: ['小兵', 250], monster: ['野怪', 800], hero: ['敌方英雄', 1800], boss: ['蒙多', 48000]};
 const NODE_INFO = {start: ['起点', '整备', '开始远征'], normal: ['小兵', '低风险', '获得金币'], elite: ['精英', '高风险', '更多金币'], hero: ['英雄', '高风险', '英雄战利品'], shop: ['商店', '休整', '购买装备'], campfire: ['篝火', '休整', '回复或冥想'], event: ['事件', '未知', '风险或收益'], boss: ['蒙多', '终局', '击败以获得 Flag']};
 const SKILL_INFO = {
   q: {name: '暗裔利刃', tag: '90%命中 · 三段斩击', detail: '亚托克斯挥动巨剑发动三段斩击。每段有 90% 命中率，依次造成 200 + 150%攻击、350 + 220%攻击、600 + 400%攻击 原始伤害；伤害受敌方护甲减免。第三段最强。持有“暗裔契约”时，Q3 额外获得强化、最大生命伤害与残血斩杀。'},
@@ -25,7 +25,10 @@ async function api(path, body) {
   return applyResponse(data);
 }
 async function refreshMap() { const data = await api('/api/map'); if (data.map) gameState.map = data.map; return data; }
-function showScene(name) { ['map', 'battle', 'event'].forEach((scene) => { el(`#scene-${scene}`).hidden = scene !== name; }); }
+const scrollPositions = {map: 0, battle: 0, event: 0};
+function saveScrollPosition() { const visible = ['map', 'battle', 'event'].find((scene) => !el(`#scene-${scene}`).hidden); if (visible) scrollPositions[visible] = window.scrollY; }
+function restoreScrollPosition(name) { requestAnimationFrame(() => window.scrollTo(0, scrollPositions[name] || 0)); }
+function showScene(name) { saveScrollPosition(); ['map', 'battle', 'event'].forEach((scene) => { el(`#scene-${scene}`).hidden = scene !== name; }); restoreScrollPosition(name); }
 function renderTopbar() {
   const run = gameState.run; const stats = gameState.stats;
   if (!run || !stats) { el('#run-stats').innerHTML = '<span class="stat-pill">尚未出征</span>'; return; }
