@@ -88,3 +88,10 @@ def test_player_script_uses_compact_skill_cards_and_visible_lifesteal(client):
     assert '三段斩击'.encode() in javascript
     assert '200 + 150%攻击'.encode() in javascript
     assert b'class="skill-tooltip"' in javascript
+
+
+def test_player_script_mounts_float_text_outside_battle_scene(client):
+    javascript = client.get('/static/app.js').data
+    assert b'combat-fx-layer' in javascript
+    assert b'getBoundingClientRect' in javascript
+    assert b'fxLayer.append(float)' in javascript

@@ -1,5 +1,9 @@
 const gameState = {run: null, stats: null, map: null, logs: [], campfireOffer: null, anvilOffer: null, randomEvent: null, randomEventNode: null, randomEventResult: null, eventLoading: false};
 const el = (selector) => document.querySelector(selector);
+const fxLayer = document.createElement('div');
+fxLayer.id = 'combat-fx-layer';
+fxLayer.setAttribute('aria-hidden', 'true');
+document.body.append(fxLayer);
 const NODE_LABELS = {start: '起点', normal: '小兵', elite: '精英', hero: '英雄', shop: '商店', campfire: '篝火', event: '事件', boss: '蒙多'};
 const ENEMY_VIEW = {minion: ['小兵', 250], monster: ['野怪', 800], hero: ['敌方英雄', 1800], boss: ['蒙多', 32000]};
 const NODE_INFO = {start: ['起点', '整备', '开始远征'], normal: ['小兵', '低风险', '获得金币'], elite: ['精英', '高风险', '更多金币'], hero: ['英雄', '高风险', '英雄战利品'], shop: ['商店', '休整', '购买装备'], campfire: ['篝火', '休整', '回复或冥想'], event: ['事件', '未知', '风险或收益'], boss: ['蒙多', '终局', '击败以获得 Flag']};
@@ -51,7 +55,7 @@ function renderApp() {
   renderMapScene();
 }
 function healthBar(current, maximum, className = '') { return `<div class="health-bar ${className}"><span style="width:${Math.max(0, Math.min(100, current / maximum * 100))}%"></span></div>`; }
-function showFloatText(selector, text, kind) { const target = el(selector); if (!target) return; const float = document.createElement('span'); float.className = `float-text ${kind}`; float.textContent = text; target.append(float); float.addEventListener('animationend', () => float.remove()); }
+function showFloatText(selector, text, kind) { const target = el(selector); if (!target) return; const rect = target.getBoundingClientRect(); const float = document.createElement('span'); float.className = `float-text ${kind}`; float.textContent = text; float.style.left = `${rect.left + rect.width / 2}px`; float.style.top = `${rect.top + rect.height * .3}px`; fxLayer.append(float); float.addEventListener('animationend', () => float.remove()); }
 function openModal(title, text, buttonText, action) { el('#modal-root').innerHTML = `<div class="modal-backdrop"><section class="modal"><p class="eyebrow">远征结果</p><h1>${title}</h1><p>${escapeHtml(text)}</p><button id="modal-action" class="primary-action">${buttonText}</button></section></div>`; el('#modal-action').onclick = action; }
 function renderBattleScene() {
   showScene('battle');
