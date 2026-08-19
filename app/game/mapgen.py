@@ -6,9 +6,7 @@ ANCHORS = {2: 'hero', 8: 'hero', 14: 'shop', 20: 'campfire', 25: 'boss'}
 
 def row_width(floor, rng):
     if floor in {1, 25}: return 1
-    if floor <= 7: return 2
-    if floor <= 17: return 3
-    return rng.randint(3, 4)
+    return rng.randint(4, 6)
 
 
 def generate_map(seed):

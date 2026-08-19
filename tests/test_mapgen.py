@@ -14,7 +14,7 @@ def test_generated_map_has_variable_row_widths_and_no_full_adjacent_connections(
     nodes, edges = generate_map(11)
     rows = {floor: [node['id'] for node in nodes if node['floor'] == floor] for floor in range(1, 26)}
     assert len(rows[1]) == len(rows[25]) == 1
-    assert all(2 <= len(rows[floor]) <= 4 for floor in range(2, 25))
+    assert all(4 <= len(rows[floor]) <= 6 for floor in range(2, 25))
     for floor in range(2, 25):
         between = [(left, right) for left, right in edges if left in rows[floor] and right in rows[floor + 1]]
         assert len(between) < len(rows[floor]) * len(rows[floor + 1])

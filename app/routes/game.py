@@ -36,7 +36,7 @@ def enter_node(node_id):
         node_row=c.execute('SELECT node_type,floor FROM map_nodes WHERE id=?',(node_id,)).fetchone(); kind=node_row['node_type']
         stage={'normal':'minion','elite':'monster','hero':'hero','shop':'shop','campfire':'campfire','boss':'boss','event':'event'}.get(kind,'event')
         hp=enemy_for_floor(stage, node_row['floor'])['hp'] if stage in ENEMIES else 0
-        c.execute('UPDATE runs SET stage=?, enemy_hp=? WHERE id=?',(stage,hp,rid))
+        c.execute('UPDATE runs SET stage=?, enemy_hp=?, enemy_max_hp=? WHERE id=?',(stage,hp,hp,rid))
         if kind == 'shop':
             c.execute("UPDATE map_nodes SET state='cleared' WHERE id=?", (node_id,))
     return jsonify(ok=True, **snapshot(rid), map=map_snapshot(current_app,rid))

@@ -2,6 +2,9 @@ const gameState = {run: null, stats: null, map: null, logs: [], campfireOffer: n
 const el = (selector) => document.querySelector(selector);
 const NODE_LABELS = {start: '起点', normal: '小兵', elite: '精英', hero: '英雄', shop: '商店', campfire: '篝火', event: '事件', boss: '蒙多'};
 const ENEMY_VIEW = {minion: ['小兵', 250], monster: ['野怪', 800], hero: ['敌方英雄', 1800], boss: ['蒙多', 32000]};
+const NODE_INFO = {start: ['起点', '整备', '开始远征'], normal: ['小兵', '低风险', '获得金币'], elite: ['精英', '高风险', '更多金币'], hero: ['英雄', '高风险', '英雄战利品'], shop: ['商店', '休整', '购买装备'], campfire: ['篝火', '休整', '回复或冥想'], event: ['事件', '未知', '风险或收益'], boss: ['蒙多', '终局', '击败以获得 Flag']};
+const SKILL_INFO = {q: ['暗裔利刃', '命中率 90%。三段循环；第三段伤害最高。', '用来稳定输出并准备 Q3 斩杀。'], w: ['恶火束链', '命中率 70%。命中后让敌人的下一次攻击降低 20%。', '面对高攻击敌人时优先削弱反击。'], e: ['暗影冲决', '本回合获得 100 护甲，之后三回合造成伤害可吸血。', '在受压时开启以稳住生命。'], r: ['大灭', '持续三回合，攻击力提升 25%。', '用于爆发回合，配合 Q3 终结敌人。']};
+const PURCHASE_ERRORS = {invalid_purchase: '金币不足、背包已满或装备规则冲突。请检查金币与已装备物品。', stage_locked: '此处无法购买。请先进入商店节点。', invalid_id: '该物品不存在。请重新选择。'};
 
 function escapeHtml(value) { return String(value).replace(/[&<>"]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[char])); }
 function addLog(text) { gameState.logs.unshift(text); gameState.logs = gameState.logs.slice(0, 8); el('#log-lines').innerHTML = gameState.logs.map((line) => `<li>${escapeHtml(line)}</li>`).join(''); }
@@ -9,7 +12,7 @@ function applyResponse(data) { if (data.run) gameState.run = data.run; if (data.
 async function api(path, body) {
   const response = await fetch(path, {method: body === undefined ? 'GET' : 'POST', headers: body === undefined ? {} : {'Content-Type': 'application/json'}, body: body === undefined ? undefined : JSON.stringify(body)});
   const data = await response.json();
-  if (!data.ok) addLog(data.error === 'node_not_cleared' ? '当前节点尚未完成。' : `操作失败：${data.error || '未知原因'}`);
+  if (!data.ok) { const message = PURCHASE_ERRORS[data.error] || (data.error === 'node_not_cleared' ? '当前节点尚未完成。' : '操作暂时无法完成。'); addLog(message); if (path.startsWith('/api/shop')) openModal('无法完成购买', message, '知道了', () => { el('#modal-root').innerHTML = ''; }); }
   return applyResponse(data);
 }
 async function refreshMap() { const data = await api('/api/map'); if (data.map) gameState.map = data.map; return data; }
@@ -25,8 +28,11 @@ function renderMapScene() {
   showScene('map');
   const current = map.current_node_id;
   const reachable = new Set(map.edges.filter((edge) => edge.from_node_id === current).map((edge) => edge.to_node_id));
-  const floors = map.nodes.reduce((out, node) => { (out[node.floor] ||= []).push(node); return out; }, {});
-  el('#scene-map').innerHTML = `<div class="scene-heading"><p class="eyebrow">远征路线</p><h1>选择下一步</h1><p>只有相邻的下一层节点可以进入。</p></div><div class="map-path">${Object.entries(floors).map(([floor, nodes]) => `<div class="map-floor"><span>${floor}F</span><div>${nodes.map((node) => `<button class="map-node ${node.state} ${reachable.has(node.id) ? 'reachable' : ''}" data-node="${node.id}" ${reachable.has(node.id) ? '' : 'disabled'}>${NODE_LABELS[node.node_type]}</button>`).join('')}</div></div>`).join('')}</div>`;
+  const floors = map.nodes.reduce((out, node) => { (out[node.floor] ||= []).push(node); return out; }, {}); const width = 760; const height = Math.max(600, Object.keys(floors).length * 104 + 70);
+  const positions = {}; Object.entries(floors).forEach(([floor, nodes]) => nodes.forEach((node, index) => { positions[node.id] = {x: Math.round(width * (index + 1) / (nodes.length + 1)), y: 48 + (Number(floor) - 1) * 104}; }));
+  const lines = map.edges.map((edge) => { const from = positions[edge.from_node_id], to = positions[edge.to_node_id]; const source = map.nodes.find((node) => node.id === edge.from_node_id); return `<line class="map-line ${edge.from_node_id === current ? 'route-active' : (source && ['left', 'cleared'].includes(source.state) ? 'route-cleared' : '')}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>`; }).join('');
+  const buttons = map.nodes.map((node) => { const [title, risk, reward] = NODE_INFO[node.node_type]; const point = positions[node.id]; return `<button class="map-node-dot ${node.node_type} ${node.state} ${reachable.has(node.id) ? 'reachable' : ''}" data-node="${node.id}" style="left:${point.x}px;top:${point.y}px" ${reachable.has(node.id) ? '' : 'disabled'} aria-label="第 ${node.floor} 层 ${title}，${risk}，${reward}"><b>${node.floor}</b><span>${title}</span><i class="node-tooltip">第 ${node.floor} 层 · ${title}<br>${risk} · ${reward}</i></button>`; }).join('');
+  el('#scene-map').innerHTML = `<div class="scene-heading"><p class="eyebrow">远征路线</p><h1>选择下一步</h1><p>发光连线表示当前可走路线；悬停节点可查看风险与收益。</p></div><div class="map-viewport"><div class="map-canvas" style="width:${width}px;height:${height}px"><svg class="map-lines" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${lines}</svg>${buttons}</div></div>`;
   document.querySelectorAll('[data-node]').forEach((button) => { button.onclick = async () => { const data = await api(`/api/map/enter/${button.dataset.node}`, {}); if (data.ok) { addLog(`进入：${NODE_LABELS[(gameState.map.nodes.find((node) => node.id === button.dataset.node) || {}).node_type] || '未知节点'}`); await refreshMap(); renderApp(); } }; });
 }
 function renderApp() {
@@ -40,19 +46,24 @@ function renderApp() {
   renderMapScene();
 }
 function healthBar(current, maximum, className = '') { return `<div class="health-bar ${className}"><span style="width:${Math.max(0, Math.min(100, current / maximum * 100))}%"></span></div>`; }
+function showFloatText(selector, text, kind) { const target = el(selector); if (!target) return; const float = document.createElement('span'); float.className = `float-text ${kind}`; float.textContent = text; target.append(float); float.addEventListener('animationend', () => float.remove()); }
 function openModal(title, text, buttonText, action) { el('#modal-root').innerHTML = `<div class="modal-backdrop"><section class="modal"><p class="eyebrow">远征结果</p><h1>${title}</h1><p>${escapeHtml(text)}</p><button id="modal-action" class="primary-action">${buttonText}</button></section></div>`; el('#modal-action').onclick = action; }
 function renderBattleScene() {
   showScene('battle');
-  const run = gameState.run; const stats = gameState.stats; const [enemyName, enemyMax] = ENEMY_VIEW[run.stage];
+  const run = gameState.run; const stats = gameState.stats; const [enemyName, staticMax] = ENEMY_VIEW[run.stage]; const enemyMax = run.stage === 'boss' ? staticMax : run.enemy_max_hp;
   const enemyHp = run.stage === 'boss' ? run.boss_hp : run.enemy_hp;
-  const moves = [['q', 'Q', '暗裔利刃', '90% 命中 · 连续三段，第三段最强'], ['w', 'W', '恶火束链', '70% 命中 · 下一次敌方攻击降低 20%'], ['e', 'E', '暗影冲决', '抵挡本回合伤害，并获得吸血'], ['r', 'R', '大灭', '持续 3 回合，攻击力提升 25%']];
-  el('#scene-battle').innerHTML = `<div class="battle-top">${healthBar(run.hp, stats.max_hp, 'player')}<span>VS</span>${healthBar(enemyHp, enemyMax, 'enemy')}</div><div class="battle-arena"><article class="combatant player-tooltip" tabindex="0"><div class="portrait-placeholder">剑魔肖像待补充</div><h2>剑魔</h2><p>HP ${run.hp}/${stats.max_hp}</p><div class="tooltip">攻击 ${stats.attack} · 护甲 ${stats.armor} · 闪避 10%</div></article><p class="turn-label">选择招式<br><small>敌方招式将在结算后揭示</small></p><article class="combatant enemy" tabindex="0"><div class="portrait-placeholder">敌方肖像待补充</div><h2>${enemyName}</h2><p>HP ${enemyHp}/${enemyMax}</p><div class="tooltip">护甲 ${run.stage === 'boss' ? 200 : '未知'} · 攻击将在结算后显示</div></article></div><div class="move-grid">${moves.map(([id, key, name, detail]) => `<button class="move-card move-${id}" data-move="${id}"><b>${key}</b><span>${name}</span><small>${detail}</small></button>`).join('')}</div>`;
+  const moves = [['q', 'Q'], ['w', 'W'], ['e', 'E'], ['r', 'R']];
+  el('#scene-battle').innerHTML = `<div class="battle-top">${healthBar(run.hp, stats.max_hp, 'player')}<span>VS</span>${healthBar(enemyHp, enemyMax, 'enemy')}</div><div class="battle-arena"><article class="combatant player-tooltip" tabindex="0"><div class="portrait-placeholder">剑魔肖像待补充</div><h2>剑魔</h2><p>HP ${run.hp}/${stats.max_hp}</p><div class="tooltip">攻击 ${stats.attack} · 护甲 ${stats.armor} · 闪避 10%</div></article><p class="turn-label">选择招式<br><small>敌方招式将在结算后揭示</small></p><article class="combatant enemy" tabindex="0"><div class="portrait-placeholder">敌方肖像待补充</div><h2>${enemyName}</h2><p>HP ${enemyHp}/${enemyMax}</p><div class="tooltip">护甲 ${run.stage === 'boss' ? 200 : '未知'} · 攻击将在结算后显示</div></article></div><div class="move-grid">${moves.map(([id, key]) => `<button class="move-card move-${id}" data-move="${id}"><b>${key}</b><span>${SKILL_INFO[id][0]}</span><small>${SKILL_INFO[id][1]}</small><i class="skill-tooltip">${SKILL_INFO[id][2]}</i></button>`).join('')}</div>`;
   document.querySelectorAll('[data-move]').forEach((button) => { button.onclick = async () => {
+    const beforeHp = gameState.run.hp;
     const data = await api('/api/game/action', {action: button.dataset.move});
     if (data.ok) { addLog(`${button.dataset.move.toUpperCase()}${data.hit ? '命中' : '落空'}，造成 ${data.damage} 伤害${data.enemy_damage ? `；受到 ${data.enemy_damage} 伤害` : '。'}`); if (data.gold_reward > 0) addLog(`胜利！获得 ${data.gold_reward} 金币。`); }
+    if (data.ok && data.damage) showFloatText('.combatant.enemy', `-${data.damage}`, 'damage');
+    if (data.ok && data.enemy_damage) showFloatText('.combatant.player-tooltip', `-${data.enemy_damage}`, 'damage-taken');
+    if (data.ok && data.run.hp > beforeHp) showFloatText('.combatant.player-tooltip', `+${data.run.hp - beforeHp}`, 'heal');
     await refreshMap();
-    if (data.flag) return openModal('蒙多倒下了', data.flag, '再开一局', () => { el('#modal-root').innerHTML = ''; el('#start').click(); });
-    if (gameState.run.status === 'failed') return openModal('远征失败', '剑魔倒下了，必须重新开始本局。', '重新开始', () => { el('#modal-root').innerHTML = ''; el('#start').click(); });
+    if (data.flag) return openModal('蒙多倒下了', data.flag, '再开一局', () => { el('#modal-root').innerHTML = ''; startNewRun(); });
+    if (gameState.run.status === 'failed') return openModal('远征失败', '剑魔倒下了，必须重新开始本局。', '重新开始', () => { el('#modal-root').innerHTML = ''; startNewRun(); });
     renderApp();
   }; });
 }
@@ -103,4 +114,5 @@ function renderRandomEvent() {
   el('#scene-event').innerHTML = `<section class="event-panel"><p class="eyebrow">随机事件</p><h1>${escapeHtml(offer.title)}</h1><p>${risk ? '力量总是伴随着代价。' : '你发现了一份可以带走的收获。'}</p><div class="choice-grid">${offer.choices.map((choice) => `<button class="choice-card ${risk ? 'risk' : 'reward'}" data-event-choice="${choice.key}"><div class="portrait-placeholder">事件插画待补充</div><h2>${escapeHtml(choice.text)}</h2><p>选择后不可撤销</p></button>`).join('')}</div></section>`;
   document.querySelectorAll('[data-event-choice]').forEach((button) => { button.onclick = async () => { const data = await api(`/api/events/${node}/choose`, {choice_key: button.dataset.eventChoice}); if (!data.ok) return; gameState.randomEventResult = data.result; addLog(data.result); await refreshMap(); renderApp(); }; });
 }
-el('#start').onclick = async () => { const data = await api('/api/runs', {}); if (data.ok) { addLog('远征开始。'); await refreshMap(); renderApp(); } };
+async function startNewRun() { gameState.map = null; gameState.campfireOffer = null; gameState.anvilOffer = null; gameState.randomEvent = null; gameState.randomEventResult = null; const data = await api('/api/runs', {}); if (data.ok) { gameState.logs = ['远征开始。']; await refreshMap(); renderApp(); } }
+el('#start').onclick = startNewRun;

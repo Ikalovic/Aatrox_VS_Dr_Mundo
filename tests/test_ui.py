@@ -57,3 +57,26 @@ def test_player_script_announces_battle_gold_rewards(client):
     javascript = client.get('/static/app.js').data
     assert b'gold_reward' in javascript
     assert '获得 ${data.gold_reward} 金币'.encode() in javascript
+
+
+def test_player_script_renders_svg_map_edges_and_node_information(client):
+    javascript = client.get('/static/app.js').data
+    assert b'<svg' in javascript
+    assert b'<line' in javascript
+    assert b'NODE_INFO' in javascript
+    assert '第 ${node.floor} 层'.encode() in javascript
+
+
+def test_player_script_has_restart_and_combat_float_text(client):
+    javascript = client.get('/static/app.js').data
+    assert b'async function startNewRun' in javascript
+    assert b'function showFloatText' in javascript
+    assert b'enemy_max_hp' in javascript
+
+
+def test_player_script_defines_skill_and_purchase_explanations(client):
+    javascript = client.get('/static/app.js').data
+    assert b'SKILL_INFO' in javascript
+    assert b'PURCHASE_ERRORS' in javascript
+    assert '命中率'.encode() in javascript
+    assert '金币不足'.encode() in javascript
