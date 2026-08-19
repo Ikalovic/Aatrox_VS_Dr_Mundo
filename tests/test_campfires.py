@@ -78,3 +78,24 @@ def test_choosing_meditation_closes_campfire(client, app):
     ).status_code == 200
     with connect(app) as c:
         assert c.execute('SELECT state FROM map_nodes WHERE id=?', (node,)).fetchone()['state'] == 'closed'
+
+
+def test_chosen_stat_augment_changes_stats(client, app):
+    run = client.post('/api/runs').get_json()['run']
+    node = make_campfire_current(app, run['id'])
+    with client.session_transaction() as session:
+        session['campfire_node'] = node
+        session['campfire_ids'] = ['dragon']
+    response = client.post(f'/api/campfires/{node}/meditate/choose', json={'augment_id': 'dragon'})
+    assert response.get_json()['stats']['attack'] == 410
+
+
+def test_gamba_adds_rerolls_and_three_free_anvils(client, app):
+    run = client.post('/api/runs').get_json()['run']
+    node = make_campfire_current(app, run['id'])
+    with client.session_transaction() as session:
+        session['campfire_node'] = node
+        session['campfire_ids'] = ['gamba']
+    response = client.post(f'/api/campfires/{node}/meditate/choose', json={'augment_id': 'gamba'}).get_json()
+    assert response['run']['reroll_tokens'] == 3
+    assert response['run']['free_anvils'] == 3

@@ -16,6 +16,11 @@ AUGMENTS = [
     ("tooth", "牙仙子", "silver", "最大生命+600", 0, 100000000, "health"),
     ("escape", "逃跑计划", "silver", "护甲+10", 0, 99999999, "armor"),
 ]
+AUGMENT_STAT_BONUSES = {
+    "soul": ("health", 800), "dragon": ("attack", 60), "goliath": ("health", 1200),
+    "ika": ("armor", 35), "basics": ("attack", 30), "slap": ("attack", 15),
+    "tooth": ("health", 600), "escape": ("armor", 10),
+}
 ENEMIES = {
     "minion": ("小兵", 250, 30, 0, 1000, "monster"),
     "monster": ("野怪", 800, 120, 30, 2000, "hero"),

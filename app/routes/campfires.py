@@ -69,5 +69,8 @@ def choose(node):
     run=get_run(current_app,rid) if rid else None
     if not run or run.get('status') == 'failed' or not valid(rid,node): return jsonify(ok=False,error='invalid_campfire'),409
     if session.get('campfire_node') != node or aid not in session.get('campfire_ids',[]): return jsonify(ok=False,error='invalid_id'),400
-    with connect() as c: c.execute('INSERT OR IGNORE INTO run_augments(run_id,augment_id) VALUES (?,?)',(rid,aid)); c.execute("UPDATE map_nodes SET state='closed' WHERE id=?",(node,))
-    return jsonify(ok=True,augment_id=aid)
+    with connect() as c:
+        c.execute('INSERT OR IGNORE INTO run_augments(run_id,augment_id) VALUES (?,?)',(rid,aid))
+        if aid == 'gamba': c.execute('UPDATE runs SET reroll_tokens=reroll_tokens+2, free_anvils=free_anvils+3 WHERE id=?',(rid,))
+        c.execute("UPDATE map_nodes SET state='closed' WHERE id=?",(node,))
+    return jsonify(ok=True,augment_id=aid,run=get_run(current_app,rid),stats=stats(current_app,rid))

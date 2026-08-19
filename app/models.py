@@ -1,6 +1,6 @@
 import uuid, random
 from .db import connect
-from .content import ENEMIES, ITEMS
+from .content import AUGMENT_STAT_BONUSES, ENEMIES, ITEMS
 
 def create_run(app, seed=None):
     run_id = str(uuid.uuid4())
@@ -34,6 +34,7 @@ def stats(app, run_id):
     with connect(app) as c:
         rows=c.execute("SELECT item_id FROM inventory WHERE run_id=?",(run_id,)).fetchall()
         shards=c.execute("SELECT stat_key,amount FROM run_stat_shards WHERE run_id=?",(run_id,)).fetchall()
+        augments=c.execute("SELECT augment_id FROM run_augments WHERE run_id=?",(run_id,)).fetchall()
     attack, hp, armor, lifesteal = 350,7000,80,0
     ids=[r["item_id"] for r in rows]
     for i in ids:
@@ -43,6 +44,13 @@ def stats(app, run_id):
         if s["stat_key"] == "attack": attack+=s["amount"]
         elif s["stat_key"] == "health": hp+=s["amount"]
         else: armor+=s["amount"]
+    for augment in augments:
+        bonus=AUGMENT_STAT_BONUSES.get(augment['augment_id'])
+        if not bonus: continue
+        stat, amount=bonus
+        if stat == 'attack': attack += amount
+        elif stat == 'health': hp += amount
+        else: armor += amount
     attack += ids.count("bloodmail") * int(hp*.005)
     return {"attack":attack,"max_hp":hp,"armor":armor,"lifesteal":lifesteal}
 
