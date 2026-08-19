@@ -27,3 +27,15 @@ def test_bloodthirster_stacks_visible_lifesteal(app):
         c.execute("INSERT INTO inventory(run_id,item_id) VALUES (?,?)", (run_id, 'bloodthirster'))
         c.execute("INSERT INTO inventory(run_id,item_id) VALUES (?,?)", (run_id, 'bloodthirster'))
     assert stats(app, run_id)['lifesteal'] == 40
+
+
+def test_free_anvil_generates_offer_without_spending_gold(client, app):
+    from app.db import connect
+    run = client.post('/api/runs').get_json()['run']
+    set_stage(app, run['id'], 'shop')
+    with connect(app) as c:
+        c.execute('UPDATE runs SET free_anvils=1 WHERE id=?', (run['id'],))
+    response = client.post('/api/shop/anvils').get_json()
+    assert response['ok']
+    assert response['run']['gold'] == 0
+    assert response['run']['free_anvils'] == 0
