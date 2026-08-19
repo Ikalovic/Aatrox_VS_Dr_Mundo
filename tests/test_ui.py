@@ -51,3 +51,9 @@ def test_player_script_renders_random_event_choices(client):
     assert b'function renderRandomEvent' in javascript
     assert b'/api/events/' in javascript
     assert '继续路线'.encode() in javascript
+
+
+def test_player_script_announces_battle_gold_rewards(client):
+    javascript = client.get('/static/app.js').data
+    assert b'gold_reward' in javascript
+    assert '获得 ${data.gold_reward} 金币'.encode() in javascript

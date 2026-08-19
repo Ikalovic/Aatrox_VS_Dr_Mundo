@@ -54,3 +54,8 @@ def map_snapshot(app, run_id):
         edges=[dict(r) for r in c.execute("SELECT from_node_id,to_node_id FROM map_edges WHERE run_id=?",(run_id,))]
         current=c.execute("SELECT current_node_id FROM run_map_state WHERE run_id=?",(run_id,)).fetchone()
     return {'nodes':nodes,'edges':edges,'current_node_id':current['current_node_id'] if current else None,'required_route':['hero','shop','campfire','boss']}
+
+def current_map_node(app, run_id):
+    with connect(app) as c:
+        return c.execute("""SELECT n.* FROM map_nodes n JOIN run_map_state s ON s.run_id=n.run_id
+                            WHERE s.run_id=? AND n.id=s.current_node_id""", (run_id,)).fetchone()

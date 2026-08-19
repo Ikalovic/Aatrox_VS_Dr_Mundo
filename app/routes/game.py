@@ -1,7 +1,7 @@
 import random
 from flask import Blueprint, current_app, jsonify, request, session
-from ..content import ENEMIES
-from ..models import create_run,get_run,save_run,stats,has_contract,map_snapshot
+from ..content import ENEMIES, enemy_for_floor
+from ..models import create_run,get_run,save_run,stats,has_contract,map_snapshot,current_map_node
 from ..game.combat import boss_q3_damage, resolve_turn
 bp = Blueprint("game", __name__)
 
@@ -33,9 +33,9 @@ def enter_node(node_id):
         linked=c.execute('SELECT 1 FROM map_edges WHERE run_id=? AND from_node_id=? AND to_node_id=?',(rid,current,node_id)).fetchone()
         if not linked: return jsonify(ok=False,error='node_locked'),409
         c.execute("UPDATE map_nodes SET state='left' WHERE id=?",(current,)); c.execute("UPDATE map_nodes SET state='current' WHERE id=?",(node_id,)); c.execute('UPDATE run_map_state SET current_node_id=? WHERE run_id=?',(node_id,rid))
-        kind=c.execute('SELECT node_type FROM map_nodes WHERE id=?',(node_id,)).fetchone()['node_type']
+        node_row=c.execute('SELECT node_type,floor FROM map_nodes WHERE id=?',(node_id,)).fetchone(); kind=node_row['node_type']
         stage={'normal':'minion','elite':'monster','hero':'hero','shop':'shop','campfire':'campfire','boss':'boss','event':'event'}.get(kind,'event')
-        hp=ENEMIES[stage][1] if stage in ENEMIES else 0
+        hp=enemy_for_floor(stage, node_row['floor'])['hp'] if stage in ENEMIES else 0
         c.execute('UPDATE runs SET stage=?, enemy_hp=? WHERE id=?',(stage,hp,rid))
         if kind == 'shop':
             c.execute("UPDATE map_nodes SET state='cleared' WHERE id=?", (node_id,))
@@ -47,9 +47,10 @@ def action():
     if run.get('status') == 'failed': return jsonify(ok=False,error='run_failed'),409
     st=stats(current_app,rid); boss=run["stage"]=="boss"
     if run["stage"] not in {*ENEMIES,"boss"}: return jsonify(ok=False,error="stage_locked"),409
-    target_armor=200 if boss else ENEMIES[run["stage"]][3]; target_hp=run["boss_hp"] if boss else run["enemy_hp"]
+    enemy = None if boss else enemy_for_floor(run['stage'], current_map_node(current_app, rid)['floor'])
+    target_armor=200 if boss else enemy['armor']; target_hp=run["boss_hp"] if boss else run["enemy_hp"]
     q_stage=run['q_stage']
-    state=resolve_turn(run, act, st['attack'], st['armor'], 8000 if boss and run['boss_awakened'] else (5000 if boss else ENEMIES[run['stage']][2]), target_armor, [random.random(), random.random()])
+    state=resolve_turn(run, act, st['attack'], st['armor'], 8000 if boss and run['boss_awakened'] else (5000 if boss else enemy['attack']), target_armor, [random.random(), random.random()])
     dealt=state['damage']
     if boss and act == 'q' and q_stage == 3 and has_contract(current_app,rid):
         attack=st['attack'] * (1.25 if run['ult_turns'] else 1)
@@ -62,7 +63,7 @@ def action():
     if target_hp<=0:
         if boss: run["boss_hp"]=0; run["won"]=1
         else:
-            _,_,_,_,reward,_=ENEMIES[run["stage"]]; run["gold"]+=reward; run["stage"]='cleared'; run["enemy_hp"]=0
+            reward=enemy['reward']; run["gold"]+=reward; run["stage"]='cleared'; run["enemy_hp"]=0
             from ..db import connect
             with connect() as c: c.execute("UPDATE map_nodes SET state='cleared' WHERE id=(SELECT current_node_id FROM run_map_state WHERE run_id=?)",(rid,))
     else:
@@ -72,4 +73,4 @@ def action():
         else: run["enemy_hp"]=target_hp
         if run['hp'] <= 0: run['hp']=0; run['status']='failed'
     save_run(current_app,run)
-    return jsonify(ok=True, damage=dealt, hit=state['hit'], enemy_damage=state['enemy_damage'], **snapshot(rid))
+    return jsonify(ok=True, damage=dealt, gold_reward=reward if target_hp <= 0 and not boss else 0, hit=state['hit'], enemy_damage=state['enemy_damage'], **snapshot(rid))

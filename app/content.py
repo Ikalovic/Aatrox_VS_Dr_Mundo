@@ -21,4 +21,19 @@ ENEMIES = {
     "monster": ("野怪", 800, 120, 30, 2000, "hero"),
     "hero": ("敌方英雄", 1800, 250, 60, 0, "shop"),
 }
+ENEMY_FLOOR_BASES = {
+    "minion": (900, 420, 25, 700, 250, 260, 110, 15),
+    "monster": (1600, 720, 60, 1400, 400, 420, 170, 20),
+    "hero": (3600, 1050, 95, 3000, 700, 650, 240, 25),
+}
+PRESSURE_MULTIPLIERS = {"minion": (1.25, 1.30), "monster": (1.35, 1.35), "hero": (1.45, 1.40)}
+
+def enemy_for_floor(enemy_key, floor):
+    hp, attack, armor, reward, reward_step, hp_step, attack_step, armor_step = ENEMY_FLOOR_BASES[enemy_key]
+    tier = floor // 6
+    hp += hp_step * tier; attack += attack_step * tier; armor += armor_step * tier; reward += reward_step * tier
+    if 17 <= floor <= 24:
+        hp_multiplier, attack_multiplier = PRESSURE_MULTIPLIERS[enemy_key]
+        hp = int(hp * hp_multiplier); attack = int(attack * attack_multiplier)
+    return {"hp": int(hp), "attack": int(attack), "armor": int(armor), "reward": int(reward)}
 ANVIL = {"silver": (80, {"attack": 15, "health": 600, "armor": 10}), "gold": (19, {"attack": 30, "health": 1200, "armor": 20}), "prismatic": (1, {"attack": 60, "health": 2400, "armor": 35})}
