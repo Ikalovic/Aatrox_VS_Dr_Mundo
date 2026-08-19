@@ -22,7 +22,10 @@ def test_non_boss_victory_returns_and_adds_floor_gold(client, app, monkeypatch):
     client.post(f'/api/map/enter/{node}')
     with connect(app) as c:
         c.execute('UPDATE runs SET enemy_hp=1 WHERE id=?', (run['id'],))
-    monkeypatch.setattr('app.routes.game.random.random', lambda: 0.0)
+    rolls = iter([0.0, 0.9])
+    monkeypatch.setattr('app.routes.game.random.random', lambda: next(rolls))
     response = client.post('/api/game/action', json={'action': 'q'}).get_json()
     assert response['gold_reward'] > 0
     assert response['run']['gold'] == response['gold_reward']
+    assert response['enemy_damage'] == 0
+    assert response['run']['hp'] == 7000

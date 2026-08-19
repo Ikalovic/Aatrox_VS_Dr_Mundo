@@ -62,6 +62,9 @@ def action():
             state['healing'] = healing
     target_hp-=dealt
     if boss and has_contract(current_app,rid) and act=="q" and q_stage==3 and 0 < target_hp < 12800: target_hp=0
+    if target_hp <= 0:
+        state['hp'] += state['enemy_damage']
+        state['enemy_damage'] = 0
     for key in ('q_stage','e_lifesteal_turns','ult_turns','w_debuff_pending','dual_wield_pending','hp'):
         if key in state: run[key]=state[key]
     run['hp']=min(st['max_hp'], run['hp'])
