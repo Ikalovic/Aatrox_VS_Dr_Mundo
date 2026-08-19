@@ -1,4 +1,4 @@
-const gameState = {run: null, stats: null, map: null, logs: [], campfireOffer: null, anvilOffer: null, randomEvent: null, randomEventNode: null, randomEventResult: null, eventLoading: false};
+const gameState = {run: null, stats: null, map: null, logs: [], campfireOffer: null, anvilOffer: null, heroRewardNode: null, randomEvent: null, randomEventNode: null, randomEventResult: null, eventLoading: false};
 const el = (selector) => document.querySelector(selector);
 const fxLayer = document.createElement('div');
 fxLayer.id = 'combat-fx-layer';
@@ -13,7 +13,7 @@ const SKILL_INFO = {
   e: {name: '暗影冲决', tag: '护甲+100 · 吸血', detail: '亚托克斯获得本回合 100 护甲。随后三回合，造成伤害时额外获得 30% 吸血；可与装备吸血叠加。'},
   r: {name: '大灭', tag: '攻击+25% · 3回合', detail: '亚托克斯开启大灭，持续三回合攻击力提升 25%。'}
 };
-const PURCHASE_ERRORS = {invalid_purchase: '金币不足、背包已满或装备规则冲突。请检查金币与已装备物品。', stage_locked: '此处无法购买。请先进入商店节点。', invalid_id: '该物品不存在。请重新选择。'};
+const PURCHASE_ERRORS = {invalid_purchase: '金币不足、背包已满或装备规则冲突。请检查金币与已装备物品。', stage_locked: '此处无法领取：请先击败对应的英雄节点。', already_claimed: '这名英雄的战利品已经领取。', invalid_id: '该物品不存在。请重新选择。'};
 
 function escapeHtml(value) { return String(value).replace(/[&<>"]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[char])); }
 function addLog(text) { gameState.logs.unshift(text); gameState.logs = gameState.logs.slice(0, 8); el('#log-lines').innerHTML = gameState.logs.map((line) => `<li>${escapeHtml(line)}</li>`).join(''); }
@@ -47,6 +47,7 @@ function renderMapScene() {
 function renderApp() {
   renderTopbar();
   if (!gameState.run) return;
+  if (gameState.heroRewardNode) return renderHeroRewardScene();
   if (['minion', 'monster', 'hero', 'boss'].includes(gameState.run.stage)) return renderBattleScene();
   const currentNode = gameState.map && gameState.map.nodes.find((node) => node.id === gameState.map.current_node_id);
   if (currentNode && currentNode.node_type === 'event' && (currentNode.state === 'current' || gameState.randomEventResult)) return renderRandomEvent();
@@ -64,11 +65,13 @@ function renderBattleScene() {
   const moves = [['q', 'Q'], ['w', 'W'], ['e', 'E'], ['r', 'R']];
   el('#scene-battle').innerHTML = `<div class="battle-top">${healthBar(run.hp, stats.max_hp, 'player')}<span>VS</span>${healthBar(enemyHp, enemyMax, 'enemy')}</div><div class="battle-arena"><article class="combatant player-tooltip" tabindex="0"><div class="portrait-placeholder">剑魔肖像待补充</div><h2>剑魔</h2><p>HP ${run.hp}/${stats.max_hp}</p><div class="tooltip">攻击 ${stats.attack} · 护甲 ${stats.armor} · 吸血 ${stats.lifesteal}% · 闪避 10%</div></article><p class="turn-label">选择招式<br><small>敌方招式将在结算后揭示</small></p><article class="combatant enemy" tabindex="0"><div class="portrait-placeholder">敌方肖像待补充</div><h2>${enemyName}</h2><p>HP ${enemyHp}/${enemyMax}</p><div class="tooltip">护甲 ${run.stage === 'boss' ? 200 : '未知'} · 攻击将在结算后显示</div></article></div><div class="move-grid">${moves.map(([id, key]) => `<button class="move-card move-${id}" data-move="${id}"><b>${key}</b><span>${SKILL_INFO[id].name}</span><small>${SKILL_INFO[id].tag}</small><i class="skill-tooltip">${SKILL_INFO[id].detail}</i></button>`).join('')}</div>`;
   document.querySelectorAll('[data-move]').forEach((button) => { button.onclick = async () => {
+    const currentNode = gameState.map.nodes.find((node) => node.id === gameState.map.current_node_id);
     const data = await api('/api/game/action', {action: button.dataset.move});
     if (data.ok) { addLog(`${button.dataset.move.toUpperCase()}${data.hit ? '命中' : '落空'}，造成 ${data.damage} 伤害${data.enemy_damage ? `；受到 ${data.enemy_damage} 伤害` : '。'}`); if (data.gold_reward > 0) addLog(`胜利！获得 ${data.gold_reward} 金币。`); }
     if (data.ok && data.damage) showFloatText('.combatant.enemy', `-${data.damage}`, 'damage');
     if (data.ok && data.enemy_damage) showFloatText('.combatant.player-tooltip', `-${data.enemy_damage}`, 'damage-taken');
     if (data.ok && data.healing > 0) showFloatText('.combatant.player-tooltip', `+${data.healing}`, 'heal');
+    if (data.ok && data.run.stage === 'cleared' && currentNode && currentNode.node_type === 'hero') gameState.heroRewardNode = currentNode.id;
     await refreshMap();
     if (data.flag) return openModal('蒙多倒下了', data.flag, '再开一局', () => { el('#modal-root').innerHTML = ''; startNewRun(); });
     if (gameState.run.status === 'failed') return openModal('远征失败', '剑魔倒下了，必须重新开始本局。', '重新开始', () => { el('#modal-root').innerHTML = ''; startNewRun(); });
@@ -82,15 +85,15 @@ const SHOP_ITEMS = [
   ['warmog', '狂徒铠甲', 3100, '+4000 生命'],
 ];
 function renderShopEvent() {
-  el('#scene-event').innerHTML = `<div class="scene-heading"><p class="eyebrow">商店</p><h1>选择你的装备</h1><p>金币：${gameState.run.gold}</p></div><div class="choice-grid">${SHOP_ITEMS.map(([id, name, price, detail]) => `<article class="choice-card item-card"><div class="portrait-placeholder">装备图标待补充</div><h2>${name}</h2><p>${detail}</p><button data-buy="${id}"><span class="gold-cost">${price} 金币</span> 购买</button></article>`).join('')}<article class="choice-card"><h2>属性锻造器</h2><p>随机获得攻击、生命或护甲强化。</p><button id="buy-anvil"><span class="gold-cost">750 金币</span> 锻造</button></article></div>${renderAnvilOffer()}<div class="event-footer"><button id="claim-loot">领取英雄战利品</button><button id="leave-event">继续路线</button><details class="details-panel"><summary>采购清单</summary><p>输入以逗号分隔的装备 ID。</p><input id="batch-list" placeholder="heartsteel,bloodmail"><button id="batch-buy">提交清单</button></details></div>`;
+  el('#scene-event').innerHTML = `<div class="scene-heading"><p class="eyebrow">商店</p><h1>选择你的装备</h1><p>金币：${gameState.run.gold}</p></div><div class="choice-grid">${SHOP_ITEMS.map(([id, name, price, detail]) => `<article class="choice-card item-card"><div class="portrait-placeholder">装备图标待补充</div><h2>${name}</h2><p>${detail}</p><button data-buy="${id}"><span class="gold-cost">${price} 金币</span> 购买</button></article>`).join('')}<article class="choice-card"><h2>属性锻造器</h2><p>随机获得攻击、生命或护甲强化。</p><button id="buy-anvil"><span class="gold-cost">750 金币</span> 锻造</button></article></div>${renderAnvilOffer()}<div class="event-footer"><button id="leave-event">继续路线</button><details class="details-panel"><summary>采购清单</summary><p>输入以逗号分隔的装备 ID。</p><input id="batch-list" placeholder="heartsteel,bloodmail"><button id="batch-buy">提交清单</button></details></div>`;
   document.querySelectorAll('[data-buy]').forEach((button) => { button.onclick = async () => { const data = await api('/api/shop/buy', {item_id: button.dataset.buy}); if (data.ok) { addLog('购买成功。'); renderShopEvent(); } }; });
   el('#buy-anvil').onclick = async () => { const data = await api('/api/shop/anvils', {}); if (data.ok) { gameState.anvilOffer = data.offer; addLog(`锻造器出现：${data.offer.tier} 品质。`); renderShopEvent(); } };
-  el('#claim-loot').onclick = async () => { const data = await api('/api/rewards/hero/claim', {}); if (data.ok) { addLog('英雄战利品已到账。'); renderShopEvent(); } };
   el('#leave-event').onclick = () => renderMapScene();
   el('#batch-buy').onclick = async () => { const ids = el('#batch-list').value.split(',').map((id) => id.trim()).filter(Boolean); const data = await api('/api/shop/batch-buy', {item_ids: ids}); if (data.ok) { addLog('采购清单已结算。'); renderShopEvent(); } };
   document.querySelectorAll('[data-anvil]').forEach((button) => { button.onclick = async () => { const data = await api('/api/shop/anvils/choose', {stat_key: button.dataset.anvil}); if (data.ok) { gameState.anvilOffer = null; addLog('属性强化已完成。'); renderShopEvent(); } }; });
 }
 function renderAnvilOffer() { if (!gameState.anvilOffer) return ''; const labels = {attack: '攻击', health: '生命', armor: '护甲'}; return `<section class="event-panel"><p class="eyebrow">${gameState.anvilOffer.tier} 锻造结果</p><h2>选择一项属性</h2><div class="choice-grid">${Object.entries(gameState.anvilOffer.options).map(([key, amount]) => `<button class="choice-card" data-anvil="${key}"><h2>${labels[key]} +${amount}</h2><p>立即获得该强化</p></button>`).join('')}</div></section>`; }
+function renderHeroRewardScene() { showScene('event'); el('#scene-event').innerHTML = `<section class="event-panel"><p class="eyebrow">英雄战利品</p><h1>敌方英雄已被击败</h1><p>领取 1500 金币与 1 张刷新券。</p><div class="event-footer"><button id="claim-hero-reward" class="primary-action">领取战利品</button><button id="leave-hero-reward">暂不领取，继续路线</button></div></section>`; el('#claim-hero-reward').onclick = async () => { const data = await api('/api/rewards/hero/claim', {node_id: gameState.heroRewardNode}); if (data.ok) { addLog('英雄战利品已到账：1500 金币、1 张刷新券。'); gameState.heroRewardNode = null; await refreshMap(); renderApp(); } }; el('#leave-hero-reward').onclick = () => { gameState.heroRewardNode = null; renderMapScene(); }; }
 function renderCampfireEvent() {
   const offers = gameState.campfireOffer;
   const base = `<div class="scene-heading"><p class="eyebrow">篝火</p><h1>${offers ? '冥想中的低语' : '短暂安歇'}</h1><p>${offers ? '从候选海克斯中选择一项力量。' : '你可以回复生命，或进入冥想。'}</p></div>`;

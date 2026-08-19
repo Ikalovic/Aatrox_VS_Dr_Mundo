@@ -101,3 +101,9 @@ def test_combat_float_effect_has_prominent_readable_duration(client):
     stylesheet = client.get('/static/combat-effects.css').data
     assert b'font-size: 2.4rem' in stylesheet
     assert b'animation: float-up 1.6s' in stylesheet
+
+
+def test_player_script_renders_hero_reward_resolution(client):
+    javascript = client.get('/static/app.js').data
+    assert b'renderHeroRewardScene' in javascript
+    assert b'/api/rewards/hero/claim' in javascript

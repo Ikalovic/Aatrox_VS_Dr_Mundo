@@ -45,9 +45,10 @@ def resolve_current():
 
 # Floor 2 is a forced hero node. Win it, then race its post-battle reward.
 enter_next('hero'); clear_battle()
+hero_node = graph()['current_node_id']
 cookies = session.cookies.get_dict()
 def claim(_):
-    return requests.post(f'{base}/api/rewards/hero/claim', cookies=cookies, timeout=10).status_code
+    return requests.post(f'{base}/api/rewards/hero/claim', json={'node_id': hero_node}, cookies=cookies, timeout=10).status_code
 with concurrent.futures.ThreadPoolExecutor(max_workers=32) as pool:
     list(pool.map(claim, range(32)))
 
