@@ -30,6 +30,17 @@ def set_stage(app, run_id, stage):
 def set_gold(app, run_id, gold):
     with connect(app) as c: c.execute("UPDATE runs SET gold=? WHERE id=?",(gold,run_id))
 
+def grant_health(app, run_id, amount):
+    max_hp=stats(app, run_id)['max_hp']
+    with connect(app) as c:
+        c.execute('UPDATE runs SET hp=MIN(?,hp+?) WHERE id=?',(max_hp,amount,run_id))
+    return get_run(app, run_id)
+
+def augment_effects(app, run_id):
+    with connect(app) as c:
+        ids={row['augment_id'] for row in c.execute('SELECT augment_id FROM run_augments WHERE run_id=?',(run_id,))}
+    return {'lifesteal': 25 if 'soul' in ids else 0, 'giant_slayer': 'giant-slayer' in ids, 'dual_wield': 'dual-wield' in ids}
+
 def stats(app, run_id):
     with connect(app) as c:
         rows=c.execute("SELECT item_id FROM inventory WHERE run_id=?",(run_id,)).fetchall()
@@ -51,6 +62,7 @@ def stats(app, run_id):
         if stat == 'attack': attack += amount
         elif stat == 'health': hp += amount
         else: armor += amount
+    if any(augment['augment_id'] == 'soul' for augment in augments): lifesteal += 25
     attack += ids.count("bloodmail") * int(hp*.005)
     return {"attack":attack,"max_hp":hp,"armor":armor,"lifesteal":lifesteal}
 

@@ -1,8 +1,8 @@
 import random
 from flask import Blueprint, current_app, jsonify, request, session
 from ..content import ENEMIES, enemy_for_floor
-from ..models import create_run,get_run,save_run,stats,has_contract,map_snapshot,current_map_node
-from ..game.combat import boss_q3_damage, resolve_turn
+from ..models import augment_effects,create_run,get_run,save_run,stats,has_contract,map_snapshot,current_map_node
+from ..game.combat import boss_q3_damage, giant_slayer_multiplier, resolve_turn
 bp = Blueprint("game", __name__)
 
 def snapshot(rid):
@@ -45,12 +45,12 @@ def action():
     rid=session.get("run_id"); run=get_run(current_app,rid) if rid else None; act=(request.get_json(silent=True) or {}).get("action")
     if not run or act not in {"q","w","e","r"}: return jsonify(ok=False,error="invalid_action"),400
     if run.get('status') == 'failed': return jsonify(ok=False,error='run_failed'),409
-    st=stats(current_app,rid); boss=run["stage"]=="boss"
+    st=stats(current_app,rid); effects=augment_effects(current_app,rid); boss=run["stage"]=="boss"
     if run["stage"] not in {*ENEMIES,"boss"}: return jsonify(ok=False,error="stage_locked"),409
     enemy = None if boss else enemy_for_floor(run['stage'], current_map_node(current_app, rid)['floor'])
     target_armor=200 if boss else enemy['armor']; target_hp=run["boss_hp"] if boss else run["enemy_hp"]
     q_stage=run['q_stage']
-    state=resolve_turn(run, act, st['attack'], st['armor'], 8000 if boss and run['boss_awakened'] else (5000 if boss else enemy['attack']), target_armor, [random.random(), random.random()], lifesteal=st['lifesteal'], max_hp=st['max_hp'])
+    state=resolve_turn(run, act, st['attack'], st['armor'], 8000 if boss and run['boss_awakened'] else (5000 if boss else enemy['attack']), target_armor, [random.random(), random.random()], lifesteal=st['lifesteal'], max_hp=st['max_hp'], damage_multiplier=giant_slayer_multiplier(target_hp,st['max_hp']) if effects['giant_slayer'] else 1, dual_wield=effects['dual_wield'])
     dealt=state['damage']
     if boss and act == 'q' and q_stage == 3 and has_contract(current_app,rid):
         attack=st['attack'] * (1.25 if run['ult_turns'] else 1)
@@ -62,7 +62,7 @@ def action():
             state['healing'] = healing
     target_hp-=dealt
     if boss and has_contract(current_app,rid) and act=="q" and q_stage==3 and 0 < target_hp < 12800: target_hp=0
-    for key in ('q_stage','e_lifesteal_turns','ult_turns','w_debuff_pending','hp'):
+    for key in ('q_stage','e_lifesteal_turns','ult_turns','w_debuff_pending','dual_wield_pending','hp'):
         if key in state: run[key]=state[key]
     run['hp']=min(st['max_hp'], run['hp'])
     if target_hp<=0:

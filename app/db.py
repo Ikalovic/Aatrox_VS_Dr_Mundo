@@ -33,5 +33,7 @@ def init_db(app):
         columns = {row['name'] for row in conn.execute('PRAGMA table_info(runs)')}
         if 'free_anvils' not in columns:
             conn.execute('ALTER TABLE runs ADD COLUMN free_anvils INTEGER NOT NULL DEFAULT 0')
+        if 'dual_wield_pending' not in columns:
+            conn.execute('ALTER TABLE runs ADD COLUMN dual_wield_pending INTEGER NOT NULL DEFAULT 0')
         conn.executemany("INSERT OR IGNORE INTO augments VALUES (?,?,?,?,?,?,?)", AUGMENTS)
         conn.executemany("INSERT OR IGNORE INTO items VALUES (?,?,?,?,?,?,?,?)", [(k, *v) for k,v in ITEMS.items()])

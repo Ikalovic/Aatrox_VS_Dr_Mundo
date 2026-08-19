@@ -2,7 +2,7 @@ import random
 from flask import Blueprint, current_app, jsonify, request, session
 from ..content import ANVIL, ITEMS
 from ..db import connect
-from ..models import get_run, stats
+from ..models import get_run, grant_health, stats
 bp = Blueprint("shop", __name__)
 
 def err(code, status=409): return jsonify(ok=False, error=code, message=code), status
@@ -19,6 +19,8 @@ def batch_buy():
     with connect() as c:
         for item in ids: c.execute("INSERT INTO inventory(run_id,item_id) VALUES (?,?)",(rid,item))
         c.execute("UPDATE runs SET gold=gold-? WHERE id=?",(cost,rid))
+    health_gain=sum(ITEMS[item][3] for item in ids)
+    if health_gain: grant_health(current_app,rid,health_gain)
     return jsonify(ok=True, run=get_run(current_app,rid), stats=stats(current_app,rid))
 
 @bp.post("/api/shop/buy")
@@ -31,6 +33,7 @@ def buy():
         owned=[r[0] for r in c.execute("SELECT item_id FROM inventory WHERE run_id=?",(rid,))]
         if len(owned)>=6 or any(ITEMS[x][6]==ITEMS[item][6] for x in owned) or run["gold"]<ITEMS[item][1]: return err("invalid_purchase")
         c.execute("INSERT INTO inventory(run_id,item_id) VALUES (?,?)",(rid,item)); c.execute("UPDATE runs SET gold=gold-? WHERE id=?",(ITEMS[item][1],rid))
+    if ITEMS[item][3]: grant_health(current_app,rid,ITEMS[item][3])
     return jsonify(ok=True,run=get_run(current_app,rid),stats=stats(current_app,rid))
 
 def roll_tier():
@@ -59,4 +62,5 @@ def choose_anvil():
         offer=c.execute("SELECT id,tier FROM stat_anvil_offers WHERE run_id=? AND chosen=0",(rid,)).fetchone()
         if not offer or key not in ANVIL[offer["tier"]][1]: return err("invalid_id",400)
         c.execute("UPDATE stat_anvil_offers SET chosen=1 WHERE id=?",(offer["id"],)); c.execute("INSERT INTO run_stat_shards(run_id,tier,stat_key,amount) VALUES (?,?,?,?)",(rid,offer["tier"],key,ANVIL[offer["tier"]][1][key]))
-    return jsonify(ok=True,stats=stats(current_app,rid))
+    if key == 'health': grant_health(current_app,rid,ANVIL[offer['tier']][1][key])
+    return jsonify(ok=True,run=get_run(current_app,rid),stats=stats(current_app,rid))

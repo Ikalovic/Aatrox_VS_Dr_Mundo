@@ -3,7 +3,7 @@ import random
 from math import ceil
 from flask import Blueprint, current_app, jsonify, request, session
 from ..db import connect
-from ..models import get_run, stats
+from ..models import get_run, grant_health, stats
 
 bp = Blueprint('events', __name__)
 OFFERS = {
@@ -35,6 +35,7 @@ def choose_event(node_id):
     run_id = session.get('run_id'); run = get_run(current_app, run_id) if run_id else None
     choice = (request.get_json(silent=True) or {}).get('choice_key')
     if not run or run['status'] == 'failed' or not active_event(run_id, node_id): return jsonify(ok=False, error='invalid_event'), 409
+    health_gain = 0
     with connect() as c:
         row = c.execute('SELECT offer_json,chosen_key FROM node_events WHERE run_id=? AND node_id=?', (run_id, node_id)).fetchone()
         if not row or row['chosen_key']: return jsonify(ok=False, error='event_resolved'), 409
@@ -51,7 +52,9 @@ def choose_event(node_id):
         else:
             stat, amount = ('health', 1200) if choice == 'health' else ('attack', 50)
             c.execute('INSERT INTO run_stat_shards(run_id,tier,stat_key,amount) VALUES (?,?,?,?)', (run_id, 'event', stat, amount))
+            if stat == 'health': health_gain = amount
             result = f'遗物赋予 {amount} {"生命" if stat == "health" else "攻击"}。'
         c.execute("UPDATE map_nodes SET state='closed' WHERE id=?", (node_id,))
         c.execute("UPDATE runs SET stage='event' WHERE id=?", (run_id,))
+    if health_gain: grant_health(current_app, run_id, health_gain)
     return jsonify(ok=True, result=result, run=get_run(current_app, run_id), stats=stats(current_app, run_id))

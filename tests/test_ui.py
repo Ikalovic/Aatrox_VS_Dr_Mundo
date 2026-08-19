@@ -115,3 +115,9 @@ def test_player_script_defines_run_scoped_map_annotations(client):
     assert b'annotation-canvas' in javascript
     assert b'localStorage' in javascript
     assert b'annotation-mode' in javascript
+
+
+def test_player_script_shows_free_anvil_charges(client):
+    javascript = client.get('/static/app.js').data
+    assert b'free_anvils' in javascript
+    assert '免费锻造（剩余'.encode() in javascript

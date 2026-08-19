@@ -1,7 +1,8 @@
 import json, random
 from flask import Blueprint, current_app, jsonify, request, session
 from ..db import connect
-from ..models import get_run, stats
+from ..content import AUGMENT_STAT_BONUSES
+from ..models import get_run, grant_health, stats
 
 bp=Blueprint('campfires',__name__)
 
@@ -73,4 +74,6 @@ def choose(node):
         c.execute('INSERT OR IGNORE INTO run_augments(run_id,augment_id) VALUES (?,?)',(rid,aid))
         if aid == 'gamba': c.execute('UPDATE runs SET reroll_tokens=reroll_tokens+2, free_anvils=free_anvils+3 WHERE id=?',(rid,))
         c.execute("UPDATE map_nodes SET state='closed' WHERE id=?",(node,))
+    bonus=AUGMENT_STAT_BONUSES.get(aid)
+    if bonus and bonus[0] == 'health': grant_health(current_app,rid,bonus[1])
     return jsonify(ok=True,augment_id=aid,run=get_run(current_app,rid),stats=stats(current_app,rid))

@@ -6,20 +6,22 @@ ITEMS = {
 }
 AUGMENTS = [
     ("darkin-contract", "暗裔契约", "prismatic", "Q3 获得最大生命伤害与斩杀", 1, 1, "darkin_contract"),
-    ("gamba", "掷骰狂人", "prismatic", "刷新券+2", 0, 120000000, "reroll"),
-    ("soul", "吞噬灵魂", "gold", "最大生命+800", 0, 120000000, "health"),
-    ("dragon", "全能龙魂", "prismatic", "攻击+60", 0, 120000000, "attack"),
-    ("goliath", "歌利亚巨人", "prismatic", "最大生命+1200", 0, 120000000, "health"),
-    ("ika", "艾卡西亚的陷落", "prismatic", "护甲+35", 0, 120000000, "armor"),
-    ("basics", "回归基本功", "gold", "攻击+30", 0, 100000000, "attack"),
-    ("slap", "扇巴掌", "silver", "攻击+15", 0, 100000000, "attack"),
-    ("tooth", "牙仙子", "silver", "最大生命+600", 0, 100000000, "health"),
-    ("escape", "逃跑计划", "silver", "护甲+10", 0, 99999999, "armor"),
+    ("gamba", "掷骰狂人", "prismatic", "刷新券+2，获得3次免费锻造", 0, 120000000, "reroll"),
+    ("soul", "灵魂虹吸", "gold", "吸血+25%", 0, 120000000, "lifesteal"),
+    ("giant-slayer", "巨人杀手", "gold", "敌方生命越高，伤害最高+70%", 0, 120000000, "giant_slayer"),
+    ("steel", "钢化你心", "gold", "最大生命+2200", 0, 120000000, "health"),
+    ("dragon", "全能龙魂", "prismatic", "攻击+140", 0, 120000000, "attack"),
+    ("goliath", "歌利亚巨人", "prismatic", "最大生命+4000", 0, 120000000, "health"),
+    ("dual-wield", "双刀流", "prismatic", "攻击+100；Q/W命中后敌方下次攻击-20%", 0, 120000000, "dual_wield"),
+    ("ika", "艾卡西亚的陷落", "gold", "护甲+65", 0, 120000000, "armor"),
+    ("basics", "回归基本功", "silver", "攻击+60", 0, 100000000, "attack"),
+    ("tooth", "牙仙子", "silver", "最大生命+1200", 0, 100000000, "health"),
+    ("escape", "逃跑计划", "silver", "护甲+30", 0, 99999999, "armor"),
 ]
 AUGMENT_STAT_BONUSES = {
-    "soul": ("health", 800), "dragon": ("attack", 60), "goliath": ("health", 1200),
-    "ika": ("armor", 35), "basics": ("attack", 30), "slap": ("attack", 15),
-    "tooth": ("health", 600), "escape": ("armor", 10),
+    "steel": ("health", 2200), "dragon": ("attack", 140), "goliath": ("health", 4000),
+    "dual-wield": ("attack", 100), "ika": ("armor", 65), "basics": ("attack", 60),
+    "tooth": ("health", 1200), "escape": ("armor", 30),
 }
 ENEMIES = {
     "minion": ("小兵", 250, 30, 0, 1000, "monster"),

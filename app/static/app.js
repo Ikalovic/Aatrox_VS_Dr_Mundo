@@ -29,7 +29,7 @@ function showScene(name) { ['map', 'battle', 'event'].forEach((scene) => { el(`#
 function renderTopbar() {
   const run = gameState.run; const stats = gameState.stats;
   if (!run || !stats) { el('#run-stats').innerHTML = '<span class="stat-pill">尚未出征</span>'; return; }
-  el('#run-stats').innerHTML = `<span class="stat-pill gold">金币 ${run.gold}</span><span class="stat-pill hp">HP ${run.hp}/${stats.max_hp}</span><span class="stat-pill">攻击 ${stats.attack}</span><span class="stat-pill">护甲 ${stats.armor}</span><span class="stat-pill">吸血 ${stats.lifesteal}%</span><span class="stat-pill">刷新券 ${run.reroll_tokens}</span>`;
+  el('#run-stats').innerHTML = `<span class="stat-pill gold">金币 ${run.gold}</span><span class="stat-pill hp">HP ${run.hp}/${stats.max_hp}</span><span class="stat-pill">攻击 ${stats.attack}</span><span class="stat-pill">护甲 ${stats.armor}</span><span class="stat-pill">吸血 ${stats.lifesteal}%</span><span class="stat-pill">刷新券 ${run.reroll_tokens}</span><span class="stat-pill">免费锻造 ${run.free_anvils || 0}</span>`;
 }
 function annotationStorageKey() { return `map-annotations:${gameState.run.id}`; }
 function setupMapAnnotations(width, height) {
@@ -104,7 +104,7 @@ const SHOP_ITEMS = [
   ['warmog', '狂徒铠甲', 3100, '+4000 生命'],
 ];
 function renderShopEvent() {
-  el('#scene-event').innerHTML = `<div class="scene-heading"><p class="eyebrow">商店</p><h1>选择你的装备</h1><p>金币：${gameState.run.gold}</p></div><div class="choice-grid">${SHOP_ITEMS.map(([id, name, price, detail]) => `<article class="choice-card item-card"><div class="portrait-placeholder">装备图标待补充</div><h2>${name}</h2><p>${detail}</p><button data-buy="${id}"><span class="gold-cost">${price} 金币</span> 购买</button></article>`).join('')}<article class="choice-card"><h2>属性锻造器</h2><p>随机获得攻击、生命或护甲强化。</p><button id="buy-anvil"><span class="gold-cost">750 金币</span> 锻造</button></article></div>${renderAnvilOffer()}<div class="event-footer"><button id="leave-event">继续路线</button><details class="details-panel"><summary>采购清单</summary><p>输入以逗号分隔的装备 ID。</p><input id="batch-list" placeholder="heartsteel,bloodmail"><button id="batch-buy">提交清单</button></details></div>`;
+  const anvilText = gameState.run.free_anvils > 0 ? `免费锻造（剩余 ${gameState.run.free_anvils}）` : '750 金币锻造'; el('#scene-event').innerHTML = `<div class="scene-heading"><p class="eyebrow">商店</p><h1>选择你的装备</h1><p>金币：${gameState.run.gold}</p></div><div class="choice-grid">${SHOP_ITEMS.map(([id, name, price, detail]) => `<article class="choice-card item-card"><div class="portrait-placeholder">装备图标待补充</div><h2>${name}</h2><p>${detail}</p><button data-buy="${id}"><span class="gold-cost">${price} 金币</span> 购买</button></article>`).join('')}<article class="choice-card"><h2>属性锻造器</h2><p>随机获得攻击、生命或护甲强化。</p><button id="buy-anvil">${anvilText}</button></article></div>${renderAnvilOffer()}<div class="event-footer"><button id="leave-event">继续路线</button><details class="details-panel"><summary>采购清单</summary><p>输入以逗号分隔的装备 ID。</p><input id="batch-list" placeholder="heartsteel,bloodmail"><button id="batch-buy">提交清单</button></details></div>`;
   document.querySelectorAll('[data-buy]').forEach((button) => { button.onclick = async () => { const data = await api('/api/shop/buy', {item_id: button.dataset.buy}); if (data.ok) { addLog('购买成功。'); renderShopEvent(); } }; });
   el('#buy-anvil').onclick = async () => { const data = await api('/api/shop/anvils', {}); if (data.ok) { gameState.anvilOffer = data.offer; addLog(`锻造器出现：${data.offer.tier} 品质。`); renderShopEvent(); } };
   el('#leave-event').onclick = () => renderMapScene();
@@ -123,7 +123,7 @@ function renderCampfireEvent() {
   el('#reroll-hex').onclick = () => campfireAction('/meditate/reroll');
   el('#search-hex').onclick = () => campfireSearch(el('#hex-query').value);
 }
-async function campfireAction(suffix, body = {}) { const node = gameState.map.current_node_id; const data = await api(`/api/campfires/${node}${suffix}`, body); if (data.ok && data.offer) gameState.campfireOffer = data.offer; if (data.ok && suffix.includes('choose')) gameState.campfireOffer = null; await refreshMap(); renderApp(); }
+async function campfireAction(suffix, body = {}) { const node = gameState.map.current_node_id; const data = await api(`/api/campfires/${node}${suffix}`, body); if (data.ok && data.offer) gameState.campfireOffer = data.offer; if (data.ok && suffix.includes('choose')) { gameState.campfireOffer = null; if (data.augment_id === 'gamba') addLog('掷骰狂人：获得 2 张刷新券与 3 次免费锻造。'); } await refreshMap(); renderApp(); }
 async function campfireSearch(query) { const node = gameState.map.current_node_id; const data = await api(`/api/campfires/${node}/meditate/search?q=${encodeURIComponent(query)}`); if (data.ok) { gameState.campfireOffer = data.results; renderCampfireEvent(); } }
 function renderEventScene() { showScene('event'); if (gameState.run.stage === 'shop') renderShopEvent(); else renderCampfireEvent(); }
 async function loadRandomEvent() {

@@ -1,4 +1,4 @@
-from app.game.combat import accuracy_hit, resolve_turn
+from app.game.combat import accuracy_hit, giant_slayer_multiplier, resolve_turn
 
 
 def test_accuracy_boundaries():
@@ -27,3 +27,8 @@ def test_lifesteal_combines_equipment_and_e_bonus():
     state = resolve_turn({'q_stage': 1, 'hp': 1000, 'e_lifesteal_turns': 3, 'r_turns': 0}, 'q', 350, 80, 0, 0, [0.0, 0.9], lifesteal=20, max_hp=7000)
     assert state['healing'] == int(state['damage'] * .50)
     assert state['hp'] == 1000 + state['healing']
+
+
+def test_giant_slayer_scales_to_seventy_percent_at_health_threshold():
+    assert giant_slayer_multiplier(12000, 10000) == 1.70
+    assert giant_slayer_multiplier(6000, 10000) == 1.35

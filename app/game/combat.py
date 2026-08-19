@@ -8,7 +8,11 @@ def boss_q3_damage(attack, boss_armor, boss_max_hp, has_contract):
     if has_contract: raw=raw*7.5+boss_max_hp*.35
     return armor_damage(raw,boss_armor)
 
-def resolve_turn(state, action, attack, armor, enemy_attack, enemy_armor, rolls, lifesteal=0, max_hp=None):
+def giant_slayer_multiplier(enemy_hp, player_max_hp):
+    if player_max_hp <= 0: return 1
+    return 1 + min(.70, .70 * enemy_hp / (player_max_hp * 1.2))
+
+def resolve_turn(state, action, attack, armor, enemy_attack, enemy_armor, rolls, lifesteal=0, max_hp=None, damage_multiplier=1, dual_wield=False):
     state=dict(state); hit_roll,dodge_roll=rolls; state['enemy_raw_attack']=enemy_attack
     apply_w_debuff=state.get('w_debuff_pending',False)
     state['w_debuff_pending']=False
@@ -22,7 +26,8 @@ def resolve_turn(state, action, attack, armor, enemy_attack, enemy_armor, rolls,
         if hit: state['w_debuff_pending']=True
     elif action=='e': state['e_lifesteal_turns']=3
     elif action=='r': ult_turns=3
-    dealt=armor_damage(raw,enemy_armor) if hit else 0
+    dealt=int(armor_damage(raw,enemy_armor)*damage_multiplier) if hit else 0
+    if dual_wield and action in {'q','w'} and hit: state['dual_wield_pending']=True
     e_active=action in {'q', 'w'} and state.get('e_lifesteal_turns', 0) > 0
     effective_lifesteal=lifesteal + (30 if e_active else 0)
     state['healing']=0
@@ -32,7 +37,9 @@ def resolve_turn(state, action, attack, armor, enemy_attack, enemy_armor, rolls,
             healing=min(healing, max(0, max_hp-state['hp']))
         state['hp']+=healing; state['healing']=healing
     if e_active: state['e_lifesteal_turns']-=1
-    raw_enemy=enemy_attack*.8 if apply_w_debuff else enemy_attack
+    apply_dual_debuff=state.get('dual_wield_pending',False)
+    state['dual_wield_pending']=False
+    raw_enemy=enemy_attack*(.8 if apply_w_debuff else 1)*(.8 if apply_dual_debuff else 1)
     state['enemy_raw_attack']=int(raw_enemy)
     effective_armor=armor+(100 if action=='e' else 0)
     state['enemy_damage']=0 if dodge_roll<.1 else armor_damage(raw_enemy,effective_armor)
