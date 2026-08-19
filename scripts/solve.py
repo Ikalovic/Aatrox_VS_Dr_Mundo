@@ -54,7 +54,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=32) as pool:
 # Progress to the forced shop on floor 5, clearing incidental fights.
 while state()['stage'] != 'shop':
     enter_next(); resolve_current()
-buy = session.post(f'{base}/api/shop/batch-buy', json={'item_ids': ['heartsteel'] * 4 + ['bloodmail'] * 4}).json()
+buy = session.post(f'{base}/api/shop/batch-buy', json={'item_ids': ['heartsteel'] * 20 + ['bloodmail'] * 20 + ['bloodthirster'] * 20}).json()
 if not buy.get('ok'): raise SystemExit(buy)
 
 # Reach the forced campfire on floor 8. SQLi adds the hidden contract to candidates.
