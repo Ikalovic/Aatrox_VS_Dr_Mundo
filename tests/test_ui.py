@@ -80,3 +80,11 @@ def test_player_script_defines_skill_and_purchase_explanations(client):
     assert b'PURCHASE_ERRORS' in javascript
     assert '命中率'.encode() in javascript
     assert '金币不足'.encode() in javascript
+
+
+def test_player_script_uses_compact_skill_cards_and_visible_lifesteal(client):
+    javascript = client.get('/static/app.js').data
+    assert '吸血 ${stats.lifesteal}%'.encode() in javascript
+    assert '三段斩击'.encode() in javascript
+    assert '200 + 150%攻击'.encode() in javascript
+    assert b'class="skill-tooltip"' in javascript

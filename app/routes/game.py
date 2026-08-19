@@ -50,11 +50,16 @@ def action():
     enemy = None if boss else enemy_for_floor(run['stage'], current_map_node(current_app, rid)['floor'])
     target_armor=200 if boss else enemy['armor']; target_hp=run["boss_hp"] if boss else run["enemy_hp"]
     q_stage=run['q_stage']
-    state=resolve_turn(run, act, st['attack'], st['armor'], 8000 if boss and run['boss_awakened'] else (5000 if boss else enemy['attack']), target_armor, [random.random(), random.random()])
+    state=resolve_turn(run, act, st['attack'], st['armor'], 8000 if boss and run['boss_awakened'] else (5000 if boss else enemy['attack']), target_armor, [random.random(), random.random()], lifesteal=st['lifesteal'], max_hp=st['max_hp'])
     dealt=state['damage']
     if boss and act == 'q' and q_stage == 3 and has_contract(current_app,rid):
         attack=st['attack'] * (1.25 if run['ult_turns'] else 1)
         dealt=boss_q3_damage(attack, target_armor, 32000, True) if state['hit'] else 0
+        if state['hit']:
+            lifesteal=st['lifesteal'] + (30 if run['e_lifesteal_turns'] else 0)
+            healing=min(st['max_hp']-run['hp'], int(dealt*lifesteal/100))
+            state['hp'] += healing-state['healing']
+            state['healing'] = healing
     target_hp-=dealt
     if boss and has_contract(current_app,rid) and act=="q" and q_stage==3 and 0 < target_hp < 12800: target_hp=0
     for key in ('q_stage','e_lifesteal_turns','ult_turns','w_debuff_pending','hp'):
@@ -73,4 +78,4 @@ def action():
         else: run["enemy_hp"]=target_hp
         if run['hp'] <= 0: run['hp']=0; run['status']='failed'
     save_run(current_app,run)
-    return jsonify(ok=True, damage=dealt, gold_reward=reward if target_hp <= 0 and not boss else 0, hit=state['hit'], enemy_damage=state['enemy_damage'], **snapshot(rid))
+    return jsonify(ok=True, damage=dealt, healing=state['healing'], gold_reward=reward if target_hp <= 0 and not boss else 0, hit=state['hit'], enemy_damage=state['enemy_damage'], **snapshot(rid))

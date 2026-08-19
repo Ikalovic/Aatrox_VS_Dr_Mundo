@@ -17,4 +17,13 @@ def test_new_run_and_duplicate_batch_purchase(client, app):
         session["run_id"] = run_id
     response = client.post("/api/shop/batch-buy", json={"item_ids": ["heartsteel"] * 4 + ["bloodmail"] * 4})
     assert response.status_code == 200
-    assert stats(app, run_id) == {"attack": 1490, "max_hp": 29000, "armor": 80}
+    assert stats(app, run_id) == {"attack": 1490, "max_hp": 29000, "armor": 80, "lifesteal": 0}
+
+
+def test_bloodthirster_stacks_visible_lifesteal(app):
+    from app.db import connect
+    run_id = create_run(app)
+    with connect(app) as c:
+        c.execute("INSERT INTO inventory(run_id,item_id) VALUES (?,?)", (run_id, 'bloodthirster'))
+        c.execute("INSERT INTO inventory(run_id,item_id) VALUES (?,?)", (run_id, 'bloodthirster'))
+    assert stats(app, run_id)['lifesteal'] == 40

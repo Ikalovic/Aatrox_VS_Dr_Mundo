@@ -34,16 +34,17 @@ def stats(app, run_id):
     with connect(app) as c:
         rows=c.execute("SELECT item_id FROM inventory WHERE run_id=?",(run_id,)).fetchall()
         shards=c.execute("SELECT stat_key,amount FROM run_stat_shards WHERE run_id=?",(run_id,)).fetchall()
-    attack, hp, armor = 350,7000,80
+    attack, hp, armor, lifesteal = 350,7000,80,0
     ids=[r["item_id"] for r in rows]
     for i in ids:
         _,_,a,h,ar,_,_=ITEMS[i]; attack+=a; hp+=h; armor+=ar
+        if ITEMS[i][5] == 'lifesteal_20': lifesteal += 20
     for s in shards:
         if s["stat_key"] == "attack": attack+=s["amount"]
         elif s["stat_key"] == "health": hp+=s["amount"]
         else: armor+=s["amount"]
     attack += ids.count("bloodmail") * int(hp*.005)
-    return {"attack":attack,"max_hp":hp,"armor":armor}
+    return {"attack":attack,"max_hp":hp,"armor":armor,"lifesteal":lifesteal}
 
 def has_contract(app, run_id):
     with connect(app) as c: return bool(c.execute("SELECT 1 FROM run_augments WHERE run_id=? AND augment_id='darkin-contract'",(run_id,)).fetchone())

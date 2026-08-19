@@ -3,7 +3,12 @@ const el = (selector) => document.querySelector(selector);
 const NODE_LABELS = {start: '起点', normal: '小兵', elite: '精英', hero: '英雄', shop: '商店', campfire: '篝火', event: '事件', boss: '蒙多'};
 const ENEMY_VIEW = {minion: ['小兵', 250], monster: ['野怪', 800], hero: ['敌方英雄', 1800], boss: ['蒙多', 32000]};
 const NODE_INFO = {start: ['起点', '整备', '开始远征'], normal: ['小兵', '低风险', '获得金币'], elite: ['精英', '高风险', '更多金币'], hero: ['英雄', '高风险', '英雄战利品'], shop: ['商店', '休整', '购买装备'], campfire: ['篝火', '休整', '回复或冥想'], event: ['事件', '未知', '风险或收益'], boss: ['蒙多', '终局', '击败以获得 Flag']};
-const SKILL_INFO = {q: ['暗裔利刃', '命中率 90%。三段循环；第三段伤害最高。', '用来稳定输出并准备 Q3 斩杀。'], w: ['恶火束链', '命中率 70%。命中后让敌人的下一次攻击降低 20%。', '面对高攻击敌人时优先削弱反击。'], e: ['暗影冲决', '本回合获得 100 护甲，之后三回合造成伤害可吸血。', '在受压时开启以稳住生命。'], r: ['大灭', '持续三回合，攻击力提升 25%。', '用于爆发回合，配合 Q3 终结敌人。']};
+const SKILL_INFO = {
+  q: {name: '暗裔利刃', tag: '90%命中 · 三段斩击', detail: '亚托克斯挥动巨剑发动三段斩击。每段有 90% 命中率，依次造成 200 + 150%攻击、350 + 220%攻击、600 + 400%攻击 原始伤害；伤害受敌方护甲减免。第三段最强。持有“暗裔契约”时，Q3 额外获得强化、最大生命伤害与残血斩杀。'},
+  w: {name: '恶火束链', tag: '70%命中 · 减攻', detail: '亚托克斯投出恶火束链。命中率 70%，造成 250 + 100%攻击 原始伤害；命中后敌人的下一次攻击降低 20%。'},
+  e: {name: '暗影冲决', tag: '护甲+100 · 吸血', detail: '亚托克斯获得本回合 100 护甲。随后三回合，造成伤害时额外获得 30% 吸血；可与装备吸血叠加。'},
+  r: {name: '大灭', tag: '攻击+25% · 3回合', detail: '亚托克斯开启大灭，持续三回合攻击力提升 25%。'}
+};
 const PURCHASE_ERRORS = {invalid_purchase: '金币不足、背包已满或装备规则冲突。请检查金币与已装备物品。', stage_locked: '此处无法购买。请先进入商店节点。', invalid_id: '该物品不存在。请重新选择。'};
 
 function escapeHtml(value) { return String(value).replace(/[&<>"]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[char])); }
@@ -20,7 +25,7 @@ function showScene(name) { ['map', 'battle', 'event'].forEach((scene) => { el(`#
 function renderTopbar() {
   const run = gameState.run; const stats = gameState.stats;
   if (!run || !stats) { el('#run-stats').innerHTML = '<span class="stat-pill">尚未出征</span>'; return; }
-  el('#run-stats').innerHTML = `<span class="stat-pill gold">金币 ${run.gold}</span><span class="stat-pill hp">HP ${run.hp}/${stats.max_hp}</span><span class="stat-pill">攻击 ${stats.attack}</span><span class="stat-pill">护甲 ${stats.armor}</span><span class="stat-pill">刷新券 ${run.reroll_tokens}</span>`;
+  el('#run-stats').innerHTML = `<span class="stat-pill gold">金币 ${run.gold}</span><span class="stat-pill hp">HP ${run.hp}/${stats.max_hp}</span><span class="stat-pill">攻击 ${stats.attack}</span><span class="stat-pill">护甲 ${stats.armor}</span><span class="stat-pill">吸血 ${stats.lifesteal}%</span><span class="stat-pill">刷新券 ${run.reroll_tokens}</span>`;
 }
 function renderMapScene() {
   const map = gameState.map;
@@ -53,14 +58,13 @@ function renderBattleScene() {
   const run = gameState.run; const stats = gameState.stats; const [enemyName, staticMax] = ENEMY_VIEW[run.stage]; const enemyMax = run.stage === 'boss' ? staticMax : run.enemy_max_hp;
   const enemyHp = run.stage === 'boss' ? run.boss_hp : run.enemy_hp;
   const moves = [['q', 'Q'], ['w', 'W'], ['e', 'E'], ['r', 'R']];
-  el('#scene-battle').innerHTML = `<div class="battle-top">${healthBar(run.hp, stats.max_hp, 'player')}<span>VS</span>${healthBar(enemyHp, enemyMax, 'enemy')}</div><div class="battle-arena"><article class="combatant player-tooltip" tabindex="0"><div class="portrait-placeholder">剑魔肖像待补充</div><h2>剑魔</h2><p>HP ${run.hp}/${stats.max_hp}</p><div class="tooltip">攻击 ${stats.attack} · 护甲 ${stats.armor} · 闪避 10%</div></article><p class="turn-label">选择招式<br><small>敌方招式将在结算后揭示</small></p><article class="combatant enemy" tabindex="0"><div class="portrait-placeholder">敌方肖像待补充</div><h2>${enemyName}</h2><p>HP ${enemyHp}/${enemyMax}</p><div class="tooltip">护甲 ${run.stage === 'boss' ? 200 : '未知'} · 攻击将在结算后显示</div></article></div><div class="move-grid">${moves.map(([id, key]) => `<button class="move-card move-${id}" data-move="${id}"><b>${key}</b><span>${SKILL_INFO[id][0]}</span><small>${SKILL_INFO[id][1]}</small><i class="skill-tooltip">${SKILL_INFO[id][2]}</i></button>`).join('')}</div>`;
+  el('#scene-battle').innerHTML = `<div class="battle-top">${healthBar(run.hp, stats.max_hp, 'player')}<span>VS</span>${healthBar(enemyHp, enemyMax, 'enemy')}</div><div class="battle-arena"><article class="combatant player-tooltip" tabindex="0"><div class="portrait-placeholder">剑魔肖像待补充</div><h2>剑魔</h2><p>HP ${run.hp}/${stats.max_hp}</p><div class="tooltip">攻击 ${stats.attack} · 护甲 ${stats.armor} · 吸血 ${stats.lifesteal}% · 闪避 10%</div></article><p class="turn-label">选择招式<br><small>敌方招式将在结算后揭示</small></p><article class="combatant enemy" tabindex="0"><div class="portrait-placeholder">敌方肖像待补充</div><h2>${enemyName}</h2><p>HP ${enemyHp}/${enemyMax}</p><div class="tooltip">护甲 ${run.stage === 'boss' ? 200 : '未知'} · 攻击将在结算后显示</div></article></div><div class="move-grid">${moves.map(([id, key]) => `<button class="move-card move-${id}" data-move="${id}"><b>${key}</b><span>${SKILL_INFO[id].name}</span><small>${SKILL_INFO[id].tag}</small><i class="skill-tooltip">${SKILL_INFO[id].detail}</i></button>`).join('')}</div>`;
   document.querySelectorAll('[data-move]').forEach((button) => { button.onclick = async () => {
-    const beforeHp = gameState.run.hp;
     const data = await api('/api/game/action', {action: button.dataset.move});
     if (data.ok) { addLog(`${button.dataset.move.toUpperCase()}${data.hit ? '命中' : '落空'}，造成 ${data.damage} 伤害${data.enemy_damage ? `；受到 ${data.enemy_damage} 伤害` : '。'}`); if (data.gold_reward > 0) addLog(`胜利！获得 ${data.gold_reward} 金币。`); }
     if (data.ok && data.damage) showFloatText('.combatant.enemy', `-${data.damage}`, 'damage');
     if (data.ok && data.enemy_damage) showFloatText('.combatant.player-tooltip', `-${data.enemy_damage}`, 'damage-taken');
-    if (data.ok && data.run.hp > beforeHp) showFloatText('.combatant.player-tooltip', `+${data.run.hp - beforeHp}`, 'heal');
+    if (data.ok && data.healing > 0) showFloatText('.combatant.player-tooltip', `+${data.healing}`, 'heal');
     await refreshMap();
     if (data.flag) return openModal('蒙多倒下了', data.flag, '再开一局', () => { el('#modal-root').innerHTML = ''; startNewRun(); });
     if (gameState.run.status === 'failed') return openModal('远征失败', '剑魔倒下了，必须重新开始本局。', '重新开始', () => { el('#modal-root').innerHTML = ''; startNewRun(); });

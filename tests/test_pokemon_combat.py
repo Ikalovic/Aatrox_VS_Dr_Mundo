@@ -21,3 +21,9 @@ def test_game_route_uses_w_as_a_combat_action(client):
     response = client.post('/api/game/action', json={'action': 'w'})
     assert response.status_code == 200
     assert 'hit' in response.get_json()
+
+
+def test_lifesteal_combines_equipment_and_e_bonus():
+    state = resolve_turn({'q_stage': 1, 'hp': 1000, 'e_lifesteal_turns': 3, 'r_turns': 0}, 'q', 350, 80, 0, 0, [0.0, 0.9], lifesteal=20, max_hp=7000)
+    assert state['healing'] == int(state['damage'] * .50)
+    assert state['hp'] == 1000 + state['healing']
