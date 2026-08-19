@@ -39,3 +39,13 @@ def test_free_anvil_generates_offer_without_spending_gold(client, app):
     assert response['ok']
     assert response['run']['gold'] == 0
     assert response['run']['free_anvils'] == 0
+
+
+def test_free_anvil_ignores_existing_event_stat_shards(client, app):
+    from app.db import connect
+    run = client.post('/api/runs').get_json()['run']
+    set_stage(app, run['id'], 'shop')
+    with connect(app) as c:
+        c.execute('UPDATE runs SET free_anvils=1 WHERE id=?', (run['id'],))
+        c.executemany('INSERT INTO run_stat_shards(run_id,tier,stat_key,amount) VALUES (?,?,?,?)', [(run['id'], 'event', 'attack', 50)] * 3)
+    assert client.post('/api/shop/anvils').get_json()['ok']

@@ -44,12 +44,12 @@ def anvil():
     rid=run_id(); run=get_run(current_app,rid) if rid else None
     if not run or run["stage"]!="shop": return err("stage_locked")
     with connect() as c:
-        used=c.execute("SELECT count(*) FROM run_stat_shards WHERE run_id=?",(rid,)).fetchone()[0]
         pending=c.execute("SELECT id,tier FROM stat_anvil_offers WHERE run_id=? AND chosen=0",(rid,)).fetchone()
-        if used>=3: return err("anvil_limit_reached")
         if pending: return err("pending_anvil_offer")
         free=c.execute('UPDATE runs SET free_anvils=free_anvils-1 WHERE id=? AND free_anvils>0',(rid,)).rowcount
         if not free:
+            used=c.execute("SELECT count(*) FROM run_stat_shards WHERE run_id=? AND tier IN ('silver','gold','prismatic')",(rid,)).fetchone()[0]
+            if used>=3: return err("anvil_limit_reached")
             if run["gold"]<750: return err("insufficient_resource")
             c.execute("UPDATE runs SET gold=gold-750 WHERE id=?",(rid,))
         tier=roll_tier(); c.execute("INSERT INTO stat_anvil_offers(run_id,tier) VALUES (?,?)",(rid,tier))
