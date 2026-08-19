@@ -1,7 +1,7 @@
 import random
 
 NODE_TYPES = ['normal', 'elite', 'event', 'campfire', 'shop', 'hero']
-ANCHORS = {2: 'hero', 8: 'hero', 14: 'shop', 20: 'campfire', 25: 'boss'}
+ANCHORS = {2: 'hero', 5: 'shop', 8: 'campfire', 14: 'hero', 20: 'shop', 23: 'campfire', 25: 'boss'}
 
 
 def row_width(floor, rng):

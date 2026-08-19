@@ -21,9 +21,12 @@ def enter_next(node_type=None):
     return target
 
 def clear_battle():
+    turn = 0
     while state()['stage'] in {'minion', 'monster', 'hero'}:
-        response = session.post(f'{base}/api/game/action', json={'action': 'q'}).json()
+        action = 'e' if turn % 4 == 0 else 'q'
+        response = session.post(f'{base}/api/game/action', json={'action': action}).json()
         if not response.get('ok') or response['run']['status'] == 'failed': raise SystemExit(response)
+        turn += 1
 
 def resolve_current():
     if state()['stage'] == 'campfire':
